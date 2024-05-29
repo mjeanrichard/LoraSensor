@@ -1,0 +1,15 @@
+dependencies:
+  idf:
+    component_hash: null
+    source:
+      type: idf
+    version: 5.2.1
+  jgromes__radiolib:
+    component_hash: null
+    source:
+      path: C:\Users\mjean\Documents\Sources\Hardware\LoraSensor\Firmware\LoraSensor\components\jgromes__radiolib
+      type: local
+    version: 6.6.0
+manifest_hash: 13c1b1e949aa7f973c31ea8bcc3dcfc8104d1e233956cb6ae17dde5db6c15aa0
+target: esp32c3
+version: 1.0.0
