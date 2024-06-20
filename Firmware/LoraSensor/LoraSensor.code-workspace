@@ -7,7 +7,20 @@
 	"settings": {
 		"files.associations": {
 			"*.tcc": "cpp",
-			"format": "cpp"
+			"format": "cpp",
+			"array": "cpp",
+			"string": "cpp",
+			"string_view": "cpp",
+			"span": "cpp",
+			"cstdint": "cpp",
+			"deque": "cpp",
+			"list": "cpp",
+			"unordered_map": "cpp",
+			"vector": "cpp",
+			"initializer_list": "cpp",
+			"regex": "cpp",
+			"adc_cali_scheme.h": "c",
+			"adc_cali_schemes.h": "c"
 		}
 	}
 }

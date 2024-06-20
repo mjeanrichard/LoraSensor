@@ -1,28 +1,23 @@
 %TF.GenerationSoftware,KiCad,Pcbnew,8.0.2*%
-%TF.CreationDate,2024-06-01T12:45:28+02:00*%
+%TF.CreationDate,2024-06-14T11:54:08+02:00*%
 %TF.ProjectId,LoraSensor,4c6f7261-5365-46e7-936f-722e6b696361,rev?*%
 %TF.SameCoordinates,Original*%
 %TF.FileFunction,Soldermask,Bot*%
 %TF.FilePolarity,Negative*%
 %FSLAX46Y46*%
 G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
-G04 Created by KiCad (PCBNEW 8.0.2) date 2024-06-01 12:45:28*
+G04 Created by KiCad (PCBNEW 8.0.2) date 2024-06-14 11:54:08*
 %MOMM*%
 %LPD*%
 G01*
 G04 APERTURE LIST*
-%ADD10C,2.000000*%
-%ADD11R,1.700000X1.700000*%
-%ADD12O,1.700000X1.700000*%
+%ADD10R,1.700000X1.700000*%
+%ADD11O,1.700000X1.700000*%
 G04 APERTURE END LIST*
 D10*
-%TO.C,TP3*%
-X147320000Y-85090000D03*
-%TD*%
-D11*
 %TO.C,J6*%
 X194056000Y-76200000D03*
-D12*
+D11*
 X194056000Y-73660000D03*
 X194056000Y-71120000D03*
 %TD*%
