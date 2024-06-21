@@ -20,7 +20,6 @@ private:
 
     esp_err_t checkId();
     esp_err_t wakeUp();
-    esp_err_t sleep();
     esp_err_t readData(float &temperature, float &humidity);
     esp_err_t reset();
 
@@ -30,4 +29,5 @@ private:
 public:
     esp_err_t measure(float &temperature, float &humidity);
     esp_err_t begin(i2c_master_bus_handle_t _busHandle);
+    esp_err_t sleep();
 };

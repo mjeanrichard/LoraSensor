@@ -1,4 +1,4 @@
-
+*.lck
 #Ignore thumbnails created by Windows
 Thumbs.db
 #Ignore files built by Visual Studio
@@ -32,3 +32,5 @@ _ReSharper*/
 packages/
 /Firmware/LoraSensor/build/*
 /Board/LoraSensor/LoraSensor-backups/
+/Board/LoraSensor/#auto_saved_files#
+*.FCBak

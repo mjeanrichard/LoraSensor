@@ -4,8 +4,6 @@
 // include RadioLib
 #include <RadioLib.h>
 
-// this example only works on ESP32 and is unlikely to work on ESP32S2/S3 etc.
-// if you need high portability, you should probably use Arduino anyway ...
 #if CONFIG_IDF_TARGET_ESP32C3 == 0
 #error Target is not ESP32C3!
 #endif
@@ -39,8 +37,6 @@
 // all of the following is needed to calculate SPI clock divider
 #define ClkRegToFreq(reg) (apb_freq / (((reg)->clkdiv_pre + 1) * ((reg)->clkcnt_n + 1)))
 
-
-
 typedef union
 {
     uint32_t value;
@@ -53,86 +49,6 @@ typedef union
         uint32_t clk_equ_sysclk : 1;
     };
 } spiClk_t;
-
-uint32_t getApbFrequency()
-{
-    rtc_cpu_freq_config_t conf;
-    rtc_clk_cpu_freq_get_config(&conf);
-
-    if (conf.freq_mhz >= 80)
-    {
-        return (80 * MHZ);
-    }
-
-    return ((conf.source_freq_mhz * MHZ) / conf.div);
-}
-
-uint32_t spiFrequencyToClockDiv(uint32_t freq)
-{
-    uint32_t apb_freq = getApbFrequency();
-    if (freq >= apb_freq)
-    {
-        return SPI_CLK_EQU_SYSCLK;
-    }
-
-    const spiClk_t minFreqReg = {0x7FFFF000};
-    uint32_t minFreq = ClkRegToFreq((spiClk_t *)&minFreqReg);
-    if (freq < minFreq)
-    {
-        return minFreqReg.value;
-    }
-
-    uint8_t calN = 1;
-    spiClk_t bestReg = {0};
-    int32_t bestFreq = 0;
-    while (calN <= 0x3F)
-    {
-        spiClk_t reg = {0};
-        int32_t calFreq;
-        int32_t calPre;
-        int8_t calPreVari = -2;
-
-        reg.clkcnt_n = calN;
-
-        while (calPreVari++ <= 1)
-        {
-            calPre = (((apb_freq / (reg.clkcnt_n + 1)) / freq) - 1) + calPreVari;
-            if (calPre > 0x1FFF)
-            {
-                reg.clkdiv_pre = 0x1FFF;
-            }
-            else if (calPre <= 0)
-            {
-                reg.clkdiv_pre = 0;
-            }
-            else
-            {
-                reg.clkdiv_pre = calPre;
-            }
-            reg.clkcnt_l = ((reg.clkcnt_n + 1) / 2);
-            calFreq = ClkRegToFreq(&reg);
-            if (calFreq == (int32_t)freq)
-            {
-                memcpy(&bestReg, &reg, sizeof(bestReg));
-                break;
-            }
-            else if (calFreq < (int32_t)freq)
-            {
-                if (RADIOLIB_ABS(freq - calFreq) < RADIOLIB_ABS(freq - bestFreq))
-                {
-                    bestFreq = calFreq;
-                    memcpy(&bestReg, &reg, sizeof(bestReg));
-                }
-            }
-        }
-        if (calFreq == (int32_t)freq)
-        {
-            break;
-        }
-        calN++;
-    }
-    return (bestReg.value);
-}
 
 // create a new ESP-IDF hardware abstraction layer
 // the HAL must inherit from the base RadioLibHal class
@@ -297,7 +213,7 @@ public:
         bus_config.max_transfer_sz = 0;
         bus_config.flags = SPICOMMON_BUSFLAG_MASTER | SPICOMMON_BUSFLAG_GPIO_PINS;
 
-        ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &bus_config, 0));
+        ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &bus_config, SPI_DMA_CH_AUTO));
 
         spi_device_interface_config_t cfg = {};
         memset(&cfg, 0, sizeof(cfg));
@@ -322,8 +238,8 @@ public:
         spi_transaction_t trx = {};
         trx.cmd = 0;
         trx.tx_buffer = out;
-        trx.length = len*8;
-        trx.rxlength = len*8;
+        trx.length = len * 8;
+        trx.rxlength = len * 8;
         trx.rx_buffer = in;
 
         ESP_ERROR_CHECK(spi_device_transmit(_spiDeviceHandle, (spi_transaction_t *)&trx));

@@ -20,7 +20,9 @@
 			"initializer_list": "cpp",
 			"regex": "cpp",
 			"adc_cali_scheme.h": "c",
-			"adc_cali_schemes.h": "c"
+			"adc_cali_schemes.h": "c",
+			"compare": "cpp",
+			"rtc.h": "c"
 		}
 	}
 }

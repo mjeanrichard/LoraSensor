@@ -81,7 +81,7 @@
 	)
 	(pad "1" smd oval
 		(at 0 -4)
-		(size 10 50)
+		(size 10 65)
 		(layers "F.Cu")
 		(thermal_bridge_angle 45)
 		(uuid "c6fb109c-3d96-4d45-80c4-8bdfcadb7753")
