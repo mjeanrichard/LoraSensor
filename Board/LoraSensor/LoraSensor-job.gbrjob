@@ -5,7 +5,7 @@
       "Application": "Pcbnew",
       "Version": "8.0.2"
     },
-    "CreationDate": "2024-06-14T11:54:08+02:00"
+    "CreationDate": "2024-06-28T10:12:45+02:00"
   },
   "GeneralSpecs": {
     "ProjectId": {
@@ -18,7 +18,7 @@
       "Y": 30.58
     },
     "LayerNumber": 2,
-    "BoardThickness": 0.19,
+    "BoardThickness": 1.29,
     "Finish": "None",
     "ImpedanceControlled": true
   },
@@ -101,7 +101,7 @@
     },
     {
       "Type": "Dielectric",
-      "Thickness": 0.1,
+      "Thickness": 1.2,
       "Material": "FR4",
       "DielectricConstant": "4.5",
       "LossTangent": "0.02",
