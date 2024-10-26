@@ -34,3 +34,4 @@ packages/
 /Board/LoraSensor/LoraSensor-backups/
 /Board/LoraSensor/#auto_saved_files#
 *.FCBak
+*.old

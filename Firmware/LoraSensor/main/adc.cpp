@@ -4,17 +4,16 @@ static const char *TAG = "ADC";
 
 esp_err_t Adc::initialize()
 {
-    adc_cali_curve_fitting_config_t calibrationConfig = {
-        .unit_id = ADC_UNIT_1,
-        .atten = ADC_ATTEN_DB_12,
-        .bitwidth = ADC_BITWIDTH_DEFAULT,
-    };
+    adc_cali_curve_fitting_config_t calibrationConfig = adc_cali_curve_fitting_config_t();
+    calibrationConfig.unit_id = ADC_UNIT_1;
+    calibrationConfig.atten = ADC_ATTEN_DB_12;
+    calibrationConfig.bitwidth = ADC_BITWIDTH_DEFAULT;
     ESP_RETURN_ON_ERROR(adc_cali_create_scheme_curve_fitting(&calibrationConfig, &_calibrationHandle), TAG, "Failed to create claibration data.");
 
     adc_oneshot_unit_init_cfg_t adcConfig = {
         .unit_id = ADC_UNIT_1,
-        .ulp_mode = ADC_ULP_MODE_DISABLE,
-    };
+        .clk_src = ADC_DIGI_CLK_SRC_DEFAULT,
+        .ulp_mode = ADC_ULP_MODE_DISABLE};
     ESP_RETURN_ON_ERROR(adc_oneshot_new_unit(&adcConfig, &_adcHandle), TAG, "Failed to create adc unit.");
 
     adc_oneshot_chan_cfg_t oneShotConfig = {
@@ -30,7 +29,8 @@ esp_err_t Adc::initialize()
         .duty_resolution = LEDC_TIMER_2_BIT,
         .timer_num = LEDC_TIMER_0,
         .freq_hz = PWM_FREQ,
-        .clk_cfg = LEDC_USE_RC_FAST_CLK};
+        .clk_cfg = LEDC_USE_RC_FAST_CLK,
+        .deconfigure = false};
     ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
 
     // Prepare and then apply the LEDC PWM channel configuration
@@ -41,7 +41,8 @@ esp_err_t Adc::initialize()
         .intr_type = LEDC_INTR_DISABLE,
         .timer_sel = LEDC_TIMER_0,
         .duty = 2,
-        .hpoint = 0};
+        .hpoint = 0,
+        .flags = 0};
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
 
     return ESP_OK;
@@ -53,8 +54,7 @@ esp_err_t Adc::stop()
     return adc_oneshot_del_unit(_adcHandle);
 }
 
-
-esp_err_t Adc::readValues(float &batteryVolts, uint8_t &moisturePercent)
+esp_err_t Adc::readValues(AdcMeasurements &measurements)
 {
     uint16_t batterySum = 0;
     uint16_t moistureSum = 0;
@@ -70,8 +70,25 @@ esp_err_t Adc::readValues(float &batteryVolts, uint8_t &moisturePercent)
         vTaskDelay(1);
     }
 
-    batteryVolts = (batterySum * 2) / (float)(1000 * NUM_ADC_READS);
-    moisturePercent = 135 - moistureSum / (20 * NUM_ADC_READS);
+    measurements.BatteryVolts = (batterySum * 2) / (float)(1000 * NUM_ADC_READS);
+
+    if (measurements.BatteryVolts >= 3.529)
+    {
+        measurements.BatteryPercent = 148 * measurements.BatteryVolts - 517;
+    }
+    else
+    {
+        measurements.BatteryPercent = 10 * measurements.BatteryVolts - 30;
+    }
+
+    if (measurements.BatteryPercent > 100)
+    {
+        measurements.BatteryPercent = 100;
+    }
+
+    measurements.MoisturePercent = 135 - moistureSum / (20 * NUM_ADC_READS);
+    measurements.MoistureRaw = moistureSum / NUM_ADC_READS;
+
     return ESP_OK;
 }
 

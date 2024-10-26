@@ -2,31 +2,176 @@
 
 static const char *TAG = "LoRa";
 
-esp_err_t LoraClient::initialize()
+static volatile int _dataReady = 0;
+
+esp_err_t LoraClient::initialize(bool forceTest)
 {
+    _forceTest = forceTest;
     _hal = new EspHal(PIN_RADIO_SCK, PIN_RADIO_MISO, PIN_RADIO_MOSI);
     _radio = new SX1262(new Module(_hal, PIN_RADIO_NSS, PIN_RADIO_DIO1, PIN_RADIO_RST, PIN_RADIO_BUSY));
 
-    int state = _radio->begin(868, 125, 7, 5, 0x12, 10, 8);
+    int state = _radio->begin(868, 125, 7, 5, 0x12, _settings->transmitPower(), 8);
     if (state != RADIOLIB_ERR_NONE)
     {
         ESP_LOGE(TAG, "Raido initialization failed (code %d)", state);
         return ESP_FAIL;
     }
+
+    uint8_t chipid[6];
+    esp_efuse_mac_get_default(chipid);
+    char buffer[13];
+    sprintf(buffer, "%02x%02x%02x%02x%02x%02x", chipid[0], chipid[1], chipid[2], chipid[3], chipid[4], chipid[5]);
+    _chipId.assign(buffer);
+
     return ESP_OK;
 }
 
-esp_err_t LoraClient::sendMeasurements(float temp, float humidity, float battery, uint8_t moisture)
+esp_err_t LoraClient::sendMeasurements(float temp, float humidity, AdcMeasurements &adcMeasurements)
 {
     char buffer[150];
-    sprintf(buffer, "{\"model\":\"ESP32TEMP\",\"id\":\"myLoraNode\",\"tempc\":%.1f,\"hum\":%.0f,\"bat\":%.1f,\"moi\":%i}", temp, humidity*100, battery, moisture);
-    ESP_LOGI(TAG, "Sending: %s", buffer);
-    int16_t state = _radio->transmit(buffer);
-    if (state != RADIOLIB_ERR_NONE)
+
+    uint8_t chipid[6];
+    esp_efuse_mac_get_default(chipid);
+    uint32_t timestamp = esp_timer_get_time() / (1000 * 1000);
+    sprintf(buffer,
+            R"({"model":"PlantSense","id":"%s","name":"%s","tempc":%.1f,"hum":%.0f,"bat":%.2f,"batPct":%i,"moi":%i,"moiRaw":%i,"test":%s,"idx":%lu})",
+            _chipId.c_str(),
+            _settings->getName().c_str(),
+            temp,
+            humidity * 100,
+            adcMeasurements.BatteryVolts,
+            adcMeasurements.BatteryPercent,
+            adcMeasurements.MoisturePercent,
+            adcMeasurements.MoistureRaw,
+            _forceTest || _settings->isTest() ? "true" : "false",
+            timestamp);
+
+    ESP_LOGD(TAG, "Sending: %s", buffer);
+    for (size_t i = 0; i < _settings->retransmits(); i++)
     {
-        ESP_LOGE(TAG, "Raido transmit failed (code %d)", state);
+        ESP_LOGI(TAG, "Retransmit %i", i);
+        int16_t state = _radio->transmit(buffer);
+        if (state != RADIOLIB_ERR_NONE)
+        {
+            ESP_LOGE(TAG, "Radio transmit failed (code %d)", state);
+            return ESP_FAIL;
+        }
+        vTaskDelay(1);
+    }
+    return ESP_OK;
+}
+
+esp_err_t LoraClient::getData()
+{
+    if (_dataReady > 0)
+    {
+        _dataReady = 0;
+
+        size_t len = _radio->getPacketLength();
+        uint8_t buffer[len + 1];
+        buffer[len] = 0;
+        int state = _radio->readData(buffer, len);
+        ESP_LOGI(TAG, "Lora Command received.");
+
+        if (state == RADIOLIB_ERR_NONE)
+        {
+            processData((char *)buffer);
+        }
+        else if (state == RADIOLIB_ERR_RX_TIMEOUT)
+        {
+            ESP_LOGE(TAG, "Radio readData timed out!");
+        }
+        else if (state == RADIOLIB_ERR_CRC_MISMATCH)
+        {
+            ESP_LOGE(TAG, "Lora Command received with CRC error.");
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Radio get Data failed with code %i", state);
+        }
+    }
+    return ESP_OK;
+}
+
+esp_err_t LoraClient::processData(char *buffer)
+{
+    cJSON *json = cJSON_Parse(buffer);
+    if (json == NULL)
+    {
+        ESP_LOGE(TAG, "Received non JSON command '%s'.", buffer);
+    }
+
+    std::string id;
+    if (getJsonString("id", json, id) != ESP_OK)
+    {
+        ESP_LOGW(TAG, "Command does not contain a device id.");
+        cJSON_free(json);
         return ESP_FAIL;
     }
+
+    if (strcasecmp(_chipId.c_str(), id.c_str()) != 0)
+    {
+        ESP_LOGI(TAG, "Device id of the command (%s) does not match ours (%s).", _chipId.c_str(), id.c_str());
+        cJSON_free(json);
+        return ESP_FAIL;
+    }
+
+    std::string strValue;
+    bool boolValue;
+    int32_t intValue = 0;
+
+    if (getJsonString("name", json, strValue) == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Setting new name '%s'.", strValue.c_str());
+        _settings->setName(strValue);
+    }
+
+    if (getJsonInt("sleep", json, intValue) == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Setting sleep time to %li.", intValue);
+        _settings->setSleepSeconds((uint16_t)intValue);
+    }
+
+    if (getJsonInt("wait", json, intValue) == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Setting wait time to %li.", intValue);
+        _settings->setWaitSeconds(intValue);
+    }
+
+    if (getJsonInt("txPower", json, intValue) == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Setting transmit power to %li.", intValue);
+        _settings->setTransmitPower(intValue);
+    }
+
+    if (getJsonInt("retransmits", json, intValue) == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Setting retransmits to %li.", intValue);
+        _settings->setRetransmits(intValue);
+    }
+
+    if (getJsonBool("test", json, boolValue) == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Setting is test to %i.", boolValue);
+        _settings->setIsTest(boolValue);
+    }
+
+    _settings->save();
+    cJSON_free(json);
+
+    return ESP_OK;
+}
+
+esp_err_t LoraClient::startListening()
+{
+    _radio->setPacketReceivedAction(dataReady);
+    int ret = _radio->startReceive();
+    if (ret != RADIOLIB_ERR_NONE)
+    {
+        ESP_LOGE(TAG, "Failed to start receive (%i)", ret);
+        return ESP_FAIL;
+    }
+
     return ESP_OK;
 }
 
@@ -38,5 +183,53 @@ esp_err_t LoraClient::sleep()
         ESP_LOGE(TAG, "Radio could not enter sleep state (%d)", state);
         return ESP_FAIL;
     }
+    return ESP_OK;
+}
+
+void IRAM_ATTR LoraClient::dataReady(void)
+{
+    _dataReady = 1;
+}
+
+esp_err_t LoraClient::getJsonString(const char *name, const cJSON *json, std::string &value)
+{
+    cJSON *property = cJSON_GetObjectItem(json, name);
+
+    if (property == NULL || !cJSON_IsString(property) || property->valuestring == NULL)
+    {
+        ESP_LOGE(TAG, "Json %s is not a string.", name);
+        return ESP_FAIL;
+    }
+
+    value.assign(property->valuestring);
+
+    return ESP_OK;
+}
+
+esp_err_t LoraClient::getJsonInt(const char *name, const cJSON *json, int32_t &value)
+{
+    cJSON *property = cJSON_GetObjectItem(json, name);
+
+    if (!cJSON_IsNumber(property))
+    {
+        ESP_LOGE(TAG, "Json %s is not an int.", name);
+        return ESP_FAIL;
+    }
+
+    value = property->valueint;
+    return ESP_OK;
+}
+
+esp_err_t LoraClient::getJsonBool(const char *name, const cJSON *json, bool &value)
+{
+    cJSON *property = cJSON_GetObjectItem(json, name);
+
+    if (!cJSON_IsBool(property))
+    {
+        ESP_LOGE(TAG, "Json %s is not a bool.", name);
+        return ESP_FAIL;
+    }
+
+    value = cJSON_IsTrue(property);
     return ESP_OK;
 }

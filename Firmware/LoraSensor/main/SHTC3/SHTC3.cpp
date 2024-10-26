@@ -10,21 +10,11 @@ static const char *TAG = "SHTC3";
 #define CMD_SOFT_RESET 0xEFC8
 #define crcPolynom 0x31
 
-#define SHTC3_RETURN_ON_ERROR(x)         \
-    do                                   \
-    {                                    \
-        esp_err_t err_rc_ = (x);         \
-        if (unlikely(err_rc_ != ESP_OK)) \
-        {                                \
-            return err_rc_;              \
-        }                                \
-    } while (0)
-
 esp_err_t SHTC3::measure(float &temperature, float &humidity)
 {
-    SHTC3_RETURN_ON_ERROR(wakeUp());
-    SHTC3_RETURN_ON_ERROR(readData(temperature, humidity));
-    SHTC3_RETURN_ON_ERROR(sleep());
+    RETURN_ON_ERROR(wakeUp());
+    RETURN_ON_ERROR(readData(temperature, humidity));
+    RETURN_ON_ERROR(sleep());
     return ESP_OK;
 }
 
@@ -39,12 +29,12 @@ esp_err_t SHTC3::begin(i2c_master_bus_handle_t busHandle)
 
     ESP_ERROR_CHECK(i2c_master_bus_add_device(busHandle, &dev_cfg, &_devHandle));
 
-    SHTC3_RETURN_ON_ERROR(wakeUp());
+    RETURN_ON_ERROR(wakeUp());
     esp_err_t err = checkId();
     if (err != ESP_OK)
     {
         reset();
-        SHTC3_RETURN_ON_ERROR(checkId());
+        RETURN_ON_ERROR(checkId());
     }
 
     return sleep();

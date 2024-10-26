@@ -1,0 +1,5 @@
+InsertBraces: true
+ColumnLimit: 200
+BreakBeforeBraces: Allman
+SeparateDefinitionBlocks: Always
+IndentWidth: 4

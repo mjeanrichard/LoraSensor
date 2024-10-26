@@ -7,6 +7,7 @@
 #include "elapsedMillis.h"
 #include "esp_check.h"
 #include "rom/ets_sys.h"
+#include "../helpers.h"
 
 class SHTC3
 {

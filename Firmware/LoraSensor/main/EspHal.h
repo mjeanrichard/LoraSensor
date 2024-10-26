@@ -21,6 +21,7 @@
 #include "esp_log.h"
 #include "driver/spi_common.h"
 #include "driver/spi_master.h"
+#include "rom/ets_sys.h"
 
 // define Arduino-style macros
 #define LOW (0x0)
@@ -59,201 +60,29 @@ class EspHal : public RadioLibHal
 public:
     // default constructor - initializes the base HAL and any needed private members
     EspHal(int8_t sck, int8_t miso, int8_t mosi)
-        : RadioLibHal(INPUT, OUTPUT, LOW, HIGH, RISING, FALLING),
+        : RadioLibHal(GPIO_MODE_INPUT, GPIO_MODE_OUTPUT, LOW, HIGH, GPIO_INTR_POSEDGE, GPIO_INTR_NEGEDGE),
           _spiSCK(sck), _spiMISO(miso), _spiMOSI(mosi)
     {
     }
 
-    void init() override
-    {
-        // we only need to init the SPI here
-        spiBegin();
-    }
+    void init() override;
+    void term() override;
+    void pinMode(uint32_t pin, uint32_t mode) override;
+    void digitalWrite(uint32_t pin, uint32_t value) override; 
+    uint32_t digitalRead(uint32_t pin) override;
+    void attachInterrupt(uint32_t interruptNum, void (*interruptCb)(void), uint32_t mode) override;
+    void detachInterrupt(uint32_t interruptNum) override;
+    void delay(unsigned long ms) override;
+    void delayMicroseconds(unsigned long us) override;
+    unsigned long millis() override;
+    unsigned long micros() override;
+    long pulseIn(uint32_t pin, uint32_t state, unsigned long timeout) override;
 
-    void term() override
-    {
-        // we only need to stop the SPI here
-        spiEnd();
-    }
-
-    // GPIO-related methods (pinMode, digitalWrite etc.) should check
-    // RADIOLIB_NC as an alias for non-connected pins
-    void pinMode(uint32_t pin, uint32_t mode) override
-    {
-        if (pin == RADIOLIB_NC)
-        {
-            return;
-        }
-
-        gpio_hal_context_t gpiohal;
-        gpiohal.dev = GPIO_LL_GET_HW(GPIO_PORT_0);
-
-        gpio_config_t conf = {
-            .pin_bit_mask = (1ULL << pin),
-            .mode = (gpio_mode_t)mode,
-            .pull_up_en = GPIO_PULLUP_DISABLE,
-            .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .intr_type = (gpio_int_type_t)gpiohal.dev->pin[pin].int_type,
-        };
-        gpio_config(&conf);
-    }
-
-    void digitalWrite(uint32_t pin, uint32_t value) override
-    {
-        if (pin == RADIOLIB_NC)
-        {
-            return;
-        }
-
-        gpio_set_level((gpio_num_t)pin, value);
-    }
-
-    uint32_t digitalRead(uint32_t pin) override
-    {
-        if (pin == RADIOLIB_NC)
-        {
-            return (0);
-        }
-
-        return (gpio_get_level((gpio_num_t)pin));
-    }
-
-    void attachInterrupt(uint32_t interruptNum, void (*interruptCb)(void), uint32_t mode) override
-    {
-        if (interruptNum == RADIOLIB_NC)
-        {
-            return;
-        }
-
-        gpio_install_isr_service((int)ESP_INTR_FLAG_IRAM);
-        gpio_set_intr_type((gpio_num_t)interruptNum, (gpio_int_type_t)(mode & 0x7));
-
-        // this uses function typecasting, which is not defined when the functions have different signatures
-        // untested and might not work
-        gpio_isr_handler_add((gpio_num_t)interruptNum, (void (*)(void *))interruptCb, NULL);
-    }
-
-    void detachInterrupt(uint32_t interruptNum) override
-    {
-        if (interruptNum == RADIOLIB_NC)
-        {
-            return;
-        }
-
-        gpio_isr_handler_remove((gpio_num_t)interruptNum);
-        gpio_wakeup_disable((gpio_num_t)interruptNum);
-        gpio_set_intr_type((gpio_num_t)interruptNum, GPIO_INTR_DISABLE);
-    }
-
-    void delay(unsigned long ms) override
-    {
-        vTaskDelay(ms / portTICK_PERIOD_MS);
-    }
-
-    void delayMicroseconds(unsigned long us) override
-    {
-        uint64_t m = (uint64_t)esp_timer_get_time();
-        if (us)
-        {
-            uint64_t e = (m + us);
-            if (m > e)
-            { // overflow
-                while ((uint64_t)esp_timer_get_time() > e)
-                {
-                    NOP();
-                }
-            }
-            while ((uint64_t)esp_timer_get_time() < e)
-            {
-                NOP();
-            }
-        }
-    }
-
-    unsigned long millis() override
-    {
-        return ((unsigned long)(esp_timer_get_time() / 1000ULL));
-    }
-
-    unsigned long micros() override
-    {
-        return ((unsigned long)(esp_timer_get_time()));
-    }
-
-    long pulseIn(uint32_t pin, uint32_t state, unsigned long timeout) override
-    {
-        if (pin == RADIOLIB_NC)
-        {
-            return (0);
-        }
-
-        this->pinMode(pin, INPUT);
-        uint32_t start = this->micros();
-        uint32_t curtick = this->micros();
-
-        while (this->digitalRead(pin) == state)
-        {
-            if ((this->micros() - curtick) > timeout)
-            {
-                return (0);
-            }
-        }
-
-        return (this->micros() - start);
-    }
-
-    void spiBegin()
-    {
-        spi_bus_config_t bus_config = {};
-        bus_config.sclk_io_num = _spiSCK;
-        bus_config.mosi_io_num = _spiMOSI;
-        bus_config.miso_io_num = _spiMISO;
-        bus_config.quadwp_io_num = -1;
-        bus_config.quadhd_io_num = -1;
-        bus_config.max_transfer_sz = 0;
-        bus_config.flags = SPICOMMON_BUSFLAG_MASTER | SPICOMMON_BUSFLAG_GPIO_PINS;
-
-        ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &bus_config, SPI_DMA_CH_AUTO));
-
-        spi_device_interface_config_t cfg = {};
-        memset(&cfg, 0, sizeof(cfg));
-        cfg.mode = 0;
-        cfg.clock_speed_hz = 3E6;
-        cfg.spics_io_num = -1;
-        cfg.queue_size = 16;
-        cfg.command_bits = 0;
-        cfg.dummy_bits = 0;
-
-        ESP_ERROR_CHECK(spi_bus_add_device(_spi, &cfg, &_spiDeviceHandle));
-    }
-
-    void spiBeginTransaction()
-    {
-        // not needed - in ESP32 Arduino core, this function
-        // repeats clock div, mode and bit order configuration
-    }
-
-    void spiTransfer(uint8_t *out, size_t len, uint8_t *in)
-    {
-        spi_transaction_t trx = {};
-        trx.cmd = 0;
-        trx.tx_buffer = out;
-        trx.length = len * 8;
-        trx.rxlength = len * 8;
-        trx.rx_buffer = in;
-
-        ESP_ERROR_CHECK(spi_device_transmit(_spiDeviceHandle, (spi_transaction_t *)&trx));
-    }
-
-    void spiEndTransaction()
-    {
-        // nothing needs to be done here
-    }
-
-    void spiEnd()
-    {
-        // detach pins
-    }
+    void spiBegin() override;
+    void spiBeginTransaction() override;
+    void spiTransfer(uint8_t *out, size_t len, uint8_t *in) override;
+    void spiEndTransaction() override;
+    void spiEnd() override;
 
 private:
     int8_t _spiSCK;
@@ -261,6 +90,8 @@ private:
     int8_t _spiMOSI;
     spi_host_device_t _spi = SPI2_HOST;
     spi_device_handle_t _spiDeviceHandle;
+
+    esp_err_t waitForPinState(gpio_num_t pin, int state, uint32_t timeoutMilliseconds);
 };
 
 #endif

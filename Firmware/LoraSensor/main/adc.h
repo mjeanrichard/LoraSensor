@@ -8,18 +8,26 @@
 #include "config.h"
 #include "freertos/FreeRTOS.h"
 
+struct AdcMeasurements
+{
+    float BatteryVolts = 0;
+    uint8_t BatteryPercent = 0;
+    uint16_t MoistureRaw = 0;
+    uint8_t MoisturePercent = 0;
+};
+
+
 class Adc
 {
 private:
     adc_oneshot_unit_handle_t _adcHandle = nullptr;
     adc_cali_handle_t _calibrationHandle = nullptr;
 
-
     esp_err_t readRaw(uint16_t &rawValue, adc_channel_t channel);
 
 public:
     esp_err_t initialize();
-    esp_err_t readValues(float &batteryVolts, uint8_t &moisturePercent);
+    esp_err_t readValues(AdcMeasurements &measurements);
     esp_err_t stop();
 
 private:
