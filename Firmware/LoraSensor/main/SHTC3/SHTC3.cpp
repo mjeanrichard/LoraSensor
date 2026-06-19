@@ -139,9 +139,9 @@ uint8_t SHTC3::calculateCrc(uint8_t data[], uint8_t len)
     {
         crc ^= data[i];
 
-        for (int i = 0; i < 8; i++)
+        for (int j = 0; j < 8; j++)
         {
-            bool isXor = crc & 0x80;
+            bool isXor = (crc & 0x80) != 0;
             crc = crc << 1;
             crc = isXor ? crc ^ crcPolynom : crc;
         }

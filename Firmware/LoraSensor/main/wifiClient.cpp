@@ -72,6 +72,6 @@ int8_t WifiClient::getRssi()
 {
     wifi_ap_record_t wifidata;
     esp_wifi_sta_get_ap_info(&wifidata);
-    ESP_LOGE(TAG, "RSSi: %i", wifidata.rssi);
+    ESP_LOGD(TAG, "RSSI: %i", wifidata.rssi);
     return wifidata.rssi;
 }

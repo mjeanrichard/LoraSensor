@@ -29,7 +29,12 @@ esp_err_t Settings::load()
     {
         _name = "Test";
         save();
-        ESP_RETURN_ON_ERROR(nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs), TAG, "Could not open NVS in qrite mode.");
+        ret = nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs);
+        if (ret != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Could not open NVS in read mode (%i).", ret);
+            return ret;
+        }
     }
     else if (ret != ESP_OK)
     {
@@ -37,16 +42,17 @@ esp_err_t Settings::load()
         return ret;
     }
 
-    RETURN_ON_ERROR(readString(nvs, "name", _name));
-    RETURN_ON_ERROR(readBool(nvs, "isTest", &_isTest));
-    RETURN_ON_ERROR(nvs_get_u16(nvs, "sleep", &_sleepSeconds));
-    RETURN_ON_ERROR(nvs_get_u8(nvs, "wait", &_waitSeconds));
-    RETURN_ON_ERROR(nvs_get_u8(nvs, "pwr", &_transmitPower));
-    RETURN_ON_ERROR(nvs_get_u8(nvs, "retx", &_retransmits));
-    RETURN_ON_ERROR(nvs_get_u16(nvs, "v", &_configVersion));
+    esp_err_t err = ESP_OK;
+    if (err == ESP_OK) err = readString(nvs, "name", _name);
+    if (err == ESP_OK) err = readBool(nvs, "isTest", &_isTest);
+    if (err == ESP_OK) err = nvs_get_u16(nvs, "sleep", &_sleepSeconds);
+    if (err == ESP_OK) err = nvs_get_u8(nvs, "wait", &_waitSeconds);
+    if (err == ESP_OK) err = nvs_get_u8(nvs, "pwr", &_transmitPower);
+    if (err == ESP_OK) err = nvs_get_u8(nvs, "retx", &_retransmits);
+    if (err == ESP_OK) err = nvs_get_u16(nvs, "v", &_configVersion);
 
     nvs_close(nvs);
-    return ESP_OK;
+    return err;
 }
 
 esp_err_t Settings::readString(nvs_handle_t nvs, const char *key, std::string &field)
@@ -54,7 +60,7 @@ esp_err_t Settings::readString(nvs_handle_t nvs, const char *key, std::string &f
     size_t len = 0;
     ESP_RETURN_ON_ERROR(nvs_get_str(nvs, key, nullptr, &len), TAG, "Could not get length of '%s' from NVS.", key);
     char buffer[len];
-    ESP_RETURN_ON_ERROR(nvs_get_str(nvs, key, buffer, &len), TAG, "Could not get length of '%s' from NVS.", key);
+    ESP_RETURN_ON_ERROR(nvs_get_str(nvs, key, buffer, &len), TAG, "Could not get value of '%s' from NVS.", key);
     field.assign(buffer);
     return ESP_OK;
 }

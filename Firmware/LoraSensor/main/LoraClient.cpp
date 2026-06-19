@@ -1,4 +1,5 @@
 #include "LoraClient.h"
+#include <algorithm>
 
 static const char *TAG = "LoRa";
 
@@ -28,7 +29,7 @@ esp_err_t LoraClient::initialize(bool forceTest)
     int state = _radio->begin(868, 125, 7, 5, 0x12, _settings->transmitPower(), 8);
     if (state != RADIOLIB_ERR_NONE)
     {
-        ESP_LOGE(TAG, "Raido initialization failed (code %d)", state);
+        ESP_LOGE(TAG, "Radio initialization failed (code %d)", state);
         return ESP_FAIL;
     }
 
@@ -130,6 +131,11 @@ esp_err_t LoraClient::getData()
         _state = LORA_STATE_RECEIVING;
 
         size_t len = _radio->getPacketLength();
+        if (len > 255)
+        {
+            ESP_LOGE(TAG, "Packet too long (%u bytes), discarding.", len);
+            return ESP_OK;
+        }
         uint8_t buffer[len + 1];
         buffer[len] = 0;
         int state = _radio->readData(buffer, len);
@@ -225,24 +231,28 @@ esp_err_t LoraClient::updateConfig(const cJSON *json)
 
     if (getJsonInt("sleep", json, intValue) == ESP_OK)
     {
+        intValue = std::max<int32_t>(10, std::min<int32_t>(3600, intValue));
         ESP_LOGI(TAG, "Setting sleep time to %li.", intValue);
         _settings->setSleepSeconds((uint16_t)intValue);
     }
 
     if (getJsonInt("wait", json, intValue) == ESP_OK)
     {
+        intValue = std::max<int32_t>(1, std::min<int32_t>(60, intValue));
         ESP_LOGI(TAG, "Setting wait time to %li.", intValue);
         _settings->setWaitSeconds(intValue);
     }
 
     if (getJsonInt("txPower", json, intValue) == ESP_OK)
     {
+        intValue = std::max<int32_t>(0, std::min<int32_t>(22, intValue));
         ESP_LOGI(TAG, "Setting transmit power to %li.", intValue);
         _settings->setTransmitPower(intValue);
     }
 
     if (getJsonInt("retransmits", json, intValue) == ESP_OK)
     {
+        intValue = std::max<int32_t>(1, std::min<int32_t>(10, intValue));
         ESP_LOGI(TAG, "Setting retransmits to %li.", intValue);
         _settings->setRetransmits(intValue);
     }

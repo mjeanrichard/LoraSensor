@@ -8,7 +8,7 @@ esp_err_t Adc::initialize()
     calibrationConfig.unit_id = ADC_UNIT_1;
     calibrationConfig.atten = ADC_ATTEN_DB_12;
     calibrationConfig.bitwidth = ADC_BITWIDTH_DEFAULT;
-    ESP_RETURN_ON_ERROR(adc_cali_create_scheme_curve_fitting(&calibrationConfig, &_calibrationHandle), TAG, "Failed to create claibration data.");
+    ESP_RETURN_ON_ERROR(adc_cali_create_scheme_curve_fitting(&calibrationConfig, &_calibrationHandle), TAG, "Failed to create calibration data.");
 
     adc_oneshot_unit_init_cfg_t adcConfig = {
         .unit_id = ADC_UNIT_1,
