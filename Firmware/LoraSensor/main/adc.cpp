@@ -42,7 +42,9 @@ esp_err_t Adc::initialize()
         .timer_sel = LEDC_TIMER_0,
         .duty = 2,
         .hpoint = 0,
-        .flags = 0};
+        .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
+        .flags = 0,
+    };
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
 
     return ESP_OK;

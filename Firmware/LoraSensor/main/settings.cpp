@@ -14,6 +14,7 @@ esp_err_t Settings::save()
     ESP_RETURN_ON_ERROR(nvs_set_u8(nvs, "wait", _waitSeconds), TAG, "Could not write wait to nvs.");
     ESP_RETURN_ON_ERROR(nvs_set_u8(nvs, "pwr", _transmitPower), TAG, "Could not write pwr to nvs.");
     ESP_RETURN_ON_ERROR(nvs_set_u8(nvs, "retx", _retransmits), TAG, "Could not write retx to nvs.");
+    ESP_RETURN_ON_ERROR(nvs_set_u16(nvs, "v", ++_configVersion), TAG, "Could not write v to nvs.");
     ESP_RETURN_ON_ERROR(nvs_commit(nvs), TAG, "Could not commit nvs.");
     nvs_close(nvs);
 
@@ -42,6 +43,7 @@ esp_err_t Settings::load()
     RETURN_ON_ERROR(nvs_get_u8(nvs, "wait", &_waitSeconds));
     RETURN_ON_ERROR(nvs_get_u8(nvs, "pwr", &_transmitPower));
     RETURN_ON_ERROR(nvs_get_u8(nvs, "retx", &_retransmits));
+    RETURN_ON_ERROR(nvs_get_u16(nvs, "v", &_configVersion));
 
     nvs_close(nvs);
     return ESP_OK;

@@ -7,6 +7,7 @@
 #include "config.h"
 #include "esp_mac.h"
 #include "settings.h"
+#include "wifiClient.h"
 
 class LoraClient
 {
@@ -16,10 +17,17 @@ class LoraClient
     Settings *_settings;
 
     bool _forceTest = false;
+    bool _isReceiving = false;
 
     static void dataReady(void);
 
+    esp_err_t transmitData(const char *buffer);
+
+    esp_err_t sendConfig();
+
     esp_err_t processData(char *buffer);
+    esp_err_t updateConfig(const cJSON *json);
+
     esp_err_t getJsonString(const char *name, const cJSON *json, std::string &value);
     esp_err_t getJsonInt(const char *name, const cJSON *json, int32_t &value);
     esp_err_t getJsonBool(const char *name, const cJSON *json, bool &value);
@@ -27,7 +35,8 @@ class LoraClient
   public:
     LoraClient(Settings *settings) : _settings(settings) {};
     esp_err_t initialize(bool forceTest);
-    esp_err_t sendMeasurements(float temp, float humidity, AdcMeasurements &adcMeasurements);
+    esp_err_t sendMeasurements(float temp, float humidity, AdcMeasurements &adcMeasurements, uint8_t wakeupCount);
+    esp_err_t sendWifiInfo(WifiClient *wifiClient);
     esp_err_t sleep();
 
     esp_err_t getData();

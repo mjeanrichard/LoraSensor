@@ -1,3 +1,5 @@
+Topic devices/OMG_LILYGO/commands/MQTTtoLORA
 
+{"message":"{\"id\":\"f0f5bdc19400\",\"name\":\"kiwi\",\"test\":false}"}
 
-{"message":"{\"id\":\"f0f5bdc194b8\",\"name\":\"kiwi\",\"txPower\":22}"}
+devices/OMG_LILYGO/LORAtoMQTT/3c84279d2150

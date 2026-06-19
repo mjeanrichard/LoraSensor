@@ -3,3 +3,8 @@ ColumnLimit: 200
 BreakBeforeBraces: Allman
 SeparateDefinitionBlocks: Always
 IndentWidth: 4
+AlignAfterOpenBracket: BlockIndent
+BinPackArguments: false
+BinPackParameters: false
+ExperimentalAutoDetectBinPacking: false
+AllowAllParametersOfDeclarationOnNextLine: false

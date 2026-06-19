@@ -11,7 +11,6 @@
 // include all the dependencies
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp32/rom/gpio.h"
 #include "soc/rtc.h"
 #include "soc/spi_reg.h"
 #include "soc/spi_struct.h"

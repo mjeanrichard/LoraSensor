@@ -9,11 +9,12 @@ class Settings
 {
 private:
     std::string _name = "Test";
-    bool _isTest = true;
+    bool _isTest = false;
     uint16_t _sleepSeconds = 300;
     uint8_t _waitSeconds = 10;
     uint8_t _transmitPower = 15;
     uint8_t _retransmits = 2;
+    uint16_t _configVersion = 0;
 
     esp_err_t readString(nvs_handle_t nvs, const char *key, std::string &field);
     esp_err_t readBool(nvs_handle_t nvs, const char *key, bool *value);
@@ -39,4 +40,6 @@ public:
 
     uint8_t retransmits() const { return _retransmits; }
     void setRetransmits(uint8_t retransmits) { _retransmits = retransmits; }
+
+    uint16_t version() const { return _configVersion; }
 };

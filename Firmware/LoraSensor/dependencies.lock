@@ -1,15 +1,32 @@
 dependencies:
+  espressif/cjson:
+    component_hash: e788323270d90738662d66fffa910bfe1fba019bba087f01557e70c40485b469
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.7.19~2
   idf:
-    component_hash: null
     source:
       type: idf
-    version: 5.2.1
-  jgromes__radiolib:
-    component_hash: null
+    version: 6.0.1
+  jgromes/radiolib:
+    component_hash: 974b5a21cb76033e24eddab1b0d19f66e03dde6dfbedaf81ed6fdc90464cdb2d
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.1'
     source:
-      path: C:\Users\mjean\Documents\Sources\Hardware\LoraSensor\Firmware\LoraSensor\components\jgromes__radiolib
-      type: local
-    version: 6.6.0
-manifest_hash: 13c1b1e949aa7f973c31ea8bcc3dcfc8104d1e233956cb6ae17dde5db6c15aa0
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 7.7.0
+direct_dependencies:
+- espressif/cjson
+- idf
+- jgromes/radiolib
+manifest_hash: 1742bd7e990180e6f3122dc161d966c330b6a60404501883e76aa28545680c8b
 target: esp32c3
-version: 1.0.0
+version: 3.0.0

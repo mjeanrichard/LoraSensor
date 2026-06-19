@@ -1,6 +1,7 @@
 ## IDF Component Manager Manifest File
 dependencies:
-  jgromes/radiolib: "^6.6.0"
+  jgromes/radiolib: ">=7.7.0"
+  espressif/cjson: ">=1.7"
   ## Required IDF version
   idf:
     version: ">=4.1.0"

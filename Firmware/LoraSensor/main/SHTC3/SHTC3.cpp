@@ -7,7 +7,7 @@ static const char *TAG = "SHTC3";
 #define CMD_READ_ID 0xEFC8
 #define CMD_WAKEUP 0x3517
 #define CMD_SLEEP 0xB098
-#define CMD_SOFT_RESET 0xEFC8
+#define CMD_SOFT_RESET 0x805D
 #define crcPolynom 0x31
 
 esp_err_t SHTC3::measure(float &temperature, float &humidity)
@@ -22,9 +22,11 @@ esp_err_t SHTC3::begin(i2c_master_bus_handle_t busHandle)
 {
 
     i2c_device_config_t dev_cfg = {
-        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = 0x70,
-        .scl_speed_hz = 100000,
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7, //
+        .device_address = 0x70,                //
+        .scl_speed_hz = 100000,                //
+        .scl_wait_us = 0,                      //
+        .flags = {.disable_ack_check = 1}
     };
 
     ESP_ERROR_CHECK(i2c_master_bus_add_device(busHandle, &dev_cfg, &_devHandle));

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "driver/gpio.h"
+
 #define PIN_SDA GPIO_NUM_21
 #define PIN_SCL GPIO_NUM_20
 #define PIN_SOIL_SENSE GPIO_NUM_0
