@@ -1,0 +1,20 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'Firmware/LoraSensor/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:v6.0.1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build firmware
+        working-directory: Firmware/LoraSensor
+        run: idf.py build
