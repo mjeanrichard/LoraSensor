@@ -21,3 +21,5 @@
 
 #define PWM_FREQ 500000
 #define NUM_ADC_READS 5
+
+#define FIRMWARE_VERSION "1.0.0"

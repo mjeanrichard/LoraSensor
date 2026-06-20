@@ -12,7 +12,7 @@ LoraSensor/
 └── Firmware/LoraSensor/
     ├── main/               Application source (all files to edit)
     │   ├── main.cpp        Entry point: init, measure, transmit, sleep
-    │   ├── config.h        GPIO pin assignments, PWM freq, ADC constants
+    │   ├── config.h        GPIO pin assignments, PWM freq, ADC constants, FIRMWARE_VERSION
     │   ├── LoraClient.{h,cpp}  SX1262 transmit/receive, JSON build/parse
     │   ├── adc.{h,cpp}     Battery + moisture ADC (with LEDC PWM drive)
     │   ├── settings.{h,cpp}    NVS-backed config (name, sleep, power, …)
@@ -71,7 +71,7 @@ idf.py update-dependencies          # pull latest managed_components versions
 - `jgromes/radiolib` ≥ 7.7.0 (currently 7.7.0; 7.7.1 available)
 - `espressif/cjson` ≥ 1.7 (currently 1.7.19~2)
 
-**Note:** `RADIOLIB_DEBUG_BASIC=1` is set in `CMakeLists.txt` — RadioLib prints debug output to UART in all builds including release. Remove before shipping.
+**Debug builds:** Pass `-DRADIOLIB_DEBUG=ON` to cmake (or `idf.py -DRADIOLIB_DEBUG=ON build`) to enable RadioLib serial debug output. Off by default.
 
 ## NVS settings
 
@@ -83,6 +83,8 @@ idf.py update-dependencies          # pull latest managed_components versions
 | `wait` | u8 | 10 | Receive window seconds |
 | `pwr` | u8 | 15 | LoRa TX power (dBm) |
 | `retx` | u8 | 2 | Number of retransmits |
+| `moiDry` | u16 | 2700 | Moisture dry-point calibration (mV, open air) |
+| `moiWet` | u16 | 700 | Moisture wet-point calibration (mV, saturated soil) |
 | `v` | u16 | auto | Config version (auto-incremented on save) |
 
 ## JSON protocol (raw LoRa, no LoRaWAN)
@@ -91,14 +93,21 @@ idf.py update-dependencies          # pull latest managed_components versions
 ```json
 {"model":"PlantSense","msg":"data","id":"<mac>","name":"<name>",
  "tempc":<float>,"hum":<float>,"bat":<float>,"batPct":<int>,
- "moi":<int>,"moiRaw":<int>,"test":<bool>,"idx":<uint>,"v":<uint>}
+ "moi":<int>,"moiRaw":<int>,"test":<bool>,"idx":<uint>,"v":<uint>,"fw":"<version>"}
+```
+
+**Uplink — wifi:**
+```json
+{"model":"PlantSense","msg":"wifi","id":"<mac>","name":"<name>",
+ "test":<bool>,"wifiRssi":<int>,"uptime":<uint>,"fw":"<version>"}
 ```
 
 **Downlink — set config:**
 ```json
 {"id":"<mac>","cmd":"set_config","name":"...","sleep":300,"wait":10,
- "txPower":15,"retransmits":2,"test":false}
+ "txPower":15,"retransmits":2,"test":false,"moiDry":2700,"moiWet":700}
 ```
+All fields optional. `moiDry`/`moiWet` are raw ADC millivolt readings; observe `moiRaw` in data packets under dry and wet conditions to determine values.
 
 **Downlink — get config:**
 ```json
@@ -108,7 +117,8 @@ idf.py update-dependencies          # pull latest managed_components versions
 **Uplink — config response:**
 ```json
 {"model":"PlantSense","msg":"config","id":"<mac>","name":"<name>",
- "test":<bool>,"sleep":<int>,"retx":<uint>,"wait":<uint>,"pwr":<uint>,"v":<uint>}
+ "test":<bool>,"sleep":<int>,"retx":<uint>,"wait":<uint>,"pwr":<uint>,
+ "moiDry":<uint>,"moiWet":<uint>,"v":<uint>,"fw":"<version>"}
 ```
 
 Gateway used: OpenMQTTGateway on a LilyGO board.
@@ -118,7 +128,6 @@ Gateway used: OpenMQTTGateway on a LilyGO board.
 See task list (created in Claude Code session). Key points:
 - WiFi credentials are currently hardcoded in `wifiClient.cpp` — must be moved to NVS
 - Received config values are not range-validated before being saved to NVS
-- `RADIOLIB_DEBUG_BASIC=1` is enabled in all builds (CMakeLists.txt)
 
 ## Coding conventions
 

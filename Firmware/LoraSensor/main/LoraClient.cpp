@@ -50,7 +50,7 @@ esp_err_t LoraClient::sendMeasurements(float temp, float humidity, AdcMeasuremen
     CHECK_SNPRINTF(snprintf(
         buffer,
         250,
-        R"({"model":"PlantSense","msg":"data","id":"%s","name":"%s","tempc":%.1f,"hum":%.0f,"bat":%.2f,"batPct":%i,"moi":%i,"moiRaw":%i,"test":%s,"idx":%u,"v":%u})",
+        R"({"model":"PlantSense","msg":"data","id":"%s","name":"%s","tempc":%.1f,"hum":%.0f,"bat":%.2f,"batPct":%i,"moi":%i,"moiRaw":%i,"test":%s,"idx":%u,"v":%u,"fw":"%s"})",
         _chipId.c_str(),
         _settings->getName().c_str(),
         temp,
@@ -61,7 +61,8 @@ esp_err_t LoraClient::sendMeasurements(float temp, float humidity, AdcMeasuremen
         adcMeasurements.MoistureRaw,
         _forceTest || _settings->isTest() ? "true" : "false",
         wakeupCount,
-        _settings->version()
+        _settings->version(),
+        FIRMWARE_VERSION
     ));
 
     return transmitData(buffer);
@@ -73,7 +74,7 @@ esp_err_t LoraClient::sendConfig()
     CHECK_SNPRINTF(snprintf(
         buffer,
         250,
-        R"({"model":"PlantSense","msg":"config","id":"%s","name":"%s","test":%s,"sleep":%i,"retx":%u,"wait":%u,"pwr":%u,"v":%u})",
+        R"({"model":"PlantSense","msg":"config","id":"%s","name":"%s","test":%s,"sleep":%i,"retx":%u,"wait":%u,"pwr":%u,"moiDry":%u,"moiWet":%u,"v":%u,"fw":"%s"})",
         _chipId.c_str(),
         _settings->getName().c_str(),
         _settings->isTest() ? "true" : "false",
@@ -81,7 +82,10 @@ esp_err_t LoraClient::sendConfig()
         _settings->retransmits(),
         _settings->waitSeconds(),
         _settings->transmitPower(),
-        _settings->version()
+        _settings->moiDry(),
+        _settings->moiWet(),
+        _settings->version(),
+        FIRMWARE_VERSION
     ));
 
     return transmitData(buffer);
@@ -93,12 +97,13 @@ esp_err_t LoraClient::sendWifiInfo(WifiClient *wifiClient)
     CHECK_SNPRINTF(snprintf(
         buffer,
         250,
-        R"({"model":"PlantSense","msg":"wifi","id":"%s","name":"%s","test":%s,"wifiRssi":%i,"uptime":%u})",
+        R"({"model":"PlantSense","msg":"wifi","id":"%s","name":"%s","test":%s,"wifiRssi":%i,"uptime":%u,"fw":"%s"})",
         _chipId.c_str(),
         _settings->getName().c_str(),
         _forceTest || _settings->isTest() ? "true" : "false",
         wifiClient->getRssi(),
-        wifiClient->getConnectTime()
+        wifiClient->getConnectTime(),
+        FIRMWARE_VERSION
     ));
 
     return transmitData(buffer);
@@ -261,6 +266,20 @@ esp_err_t LoraClient::updateConfig(const cJSON *json)
     {
         ESP_LOGI(TAG, "Setting is test to %i.", boolValue);
         _settings->setIsTest(boolValue);
+    }
+
+    if (getJsonInt("moiDry", json, intValue) == ESP_OK)
+    {
+        intValue = std::max<int32_t>(0, std::min<int32_t>(3300, intValue));
+        ESP_LOGI(TAG, "Setting moisture dry point to %li.", intValue);
+        _settings->setMoiDry((uint16_t)intValue);
+    }
+
+    if (getJsonInt("moiWet", json, intValue) == ESP_OK)
+    {
+        intValue = std::max<int32_t>(0, std::min<int32_t>(3300, intValue));
+        ESP_LOGI(TAG, "Setting moisture wet point to %li.", intValue);
+        _settings->setMoiWet((uint16_t)intValue);
     }
 
     _settings->save();

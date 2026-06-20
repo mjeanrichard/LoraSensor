@@ -15,6 +15,8 @@ private:
     uint8_t _transmitPower = 15;
     uint8_t _retransmits = 2;
     uint16_t _configVersion = 0;
+    uint16_t _moiDry = 2700;
+    uint16_t _moiWet = 700;
 
     esp_err_t readString(nvs_handle_t nvs, const char *key, std::string &field);
     esp_err_t readBool(nvs_handle_t nvs, const char *key, bool *value);
@@ -42,4 +44,10 @@ public:
     void setRetransmits(uint8_t retransmits) { _retransmits = retransmits; }
 
     uint16_t version() const { return _configVersion; }
+
+    uint16_t moiDry() const { return _moiDry; }
+    void setMoiDry(uint16_t moiDry) { _moiDry = moiDry; }
+
+    uint16_t moiWet() const { return _moiWet; }
+    void setMoiWet(uint16_t moiWet) { _moiWet = moiWet; }
 };

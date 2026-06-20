@@ -1,8 +1,9 @@
 #include "adc.h"
+#include <algorithm>
 
 static const char *TAG = "ADC";
 
-esp_err_t Adc::initialize()
+esp_err_t Adc::initialize(Settings &settings)
 {
     adc_cali_curve_fitting_config_t calibrationConfig = adc_cali_curve_fitting_config_t();
     calibrationConfig.unit_id = ADC_UNIT_1;
@@ -47,6 +48,7 @@ esp_err_t Adc::initialize()
     };
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
 
+    _settings = &settings;
     return ESP_OK;
 }
 
@@ -88,8 +90,18 @@ esp_err_t Adc::readValues(AdcMeasurements &measurements)
         measurements.BatteryPercent = 100;
     }
 
-    measurements.MoisturePercent = 135 - moistureSum / (20 * NUM_ADC_READS);
     measurements.MoistureRaw = moistureSum / NUM_ADC_READS;
+    uint16_t dryPoint = _settings->moiDry();
+    uint16_t wetPoint = _settings->moiWet();
+    if (dryPoint > wetPoint)
+    {
+        int32_t pct = (int32_t)(dryPoint - measurements.MoistureRaw) * 100 / (dryPoint - wetPoint);
+        measurements.MoisturePercent = (uint8_t)std::max<int32_t>(0, std::min<int32_t>(100, pct));
+    }
+    else
+    {
+        measurements.MoisturePercent = 0;
+    }
 
     return ESP_OK;
 }

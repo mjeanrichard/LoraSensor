@@ -7,6 +7,7 @@
 #include "driver/ledc.h"
 #include "config.h"
 #include "freertos/FreeRTOS.h"
+#include "settings.h"
 
 struct AdcMeasurements
 {
@@ -22,11 +23,12 @@ class Adc
 private:
     adc_oneshot_unit_handle_t _adcHandle = nullptr;
     adc_cali_handle_t _calibrationHandle = nullptr;
+    Settings *_settings = nullptr;
 
     esp_err_t readRaw(uint16_t &rawValue, adc_channel_t channel);
 
 public:
-    esp_err_t initialize();
+    esp_err_t initialize(Settings &settings);
     esp_err_t readValues(AdcMeasurements &measurements);
     esp_err_t stop();
 

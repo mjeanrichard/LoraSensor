@@ -85,7 +85,7 @@ extern "C" void app_main(void)
 
     settings.load();
 
-    _adc->initialize();
+    _adc->initialize(settings);
     setupI2c();
     _loraClient->initialize(hasUsb);
 

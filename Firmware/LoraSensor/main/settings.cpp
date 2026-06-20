@@ -14,6 +14,8 @@ esp_err_t Settings::save()
     ESP_RETURN_ON_ERROR(nvs_set_u8(nvs, "wait", _waitSeconds), TAG, "Could not write wait to nvs.");
     ESP_RETURN_ON_ERROR(nvs_set_u8(nvs, "pwr", _transmitPower), TAG, "Could not write pwr to nvs.");
     ESP_RETURN_ON_ERROR(nvs_set_u8(nvs, "retx", _retransmits), TAG, "Could not write retx to nvs.");
+    ESP_RETURN_ON_ERROR(nvs_set_u16(nvs, "moiDry", _moiDry), TAG, "Could not write moiDry to nvs.");
+    ESP_RETURN_ON_ERROR(nvs_set_u16(nvs, "moiWet", _moiWet), TAG, "Could not write moiWet to nvs.");
     ESP_RETURN_ON_ERROR(nvs_set_u16(nvs, "v", ++_configVersion), TAG, "Could not write v to nvs.");
     ESP_RETURN_ON_ERROR(nvs_commit(nvs), TAG, "Could not commit nvs.");
     nvs_close(nvs);
@@ -50,6 +52,11 @@ esp_err_t Settings::load()
     if (err == ESP_OK) err = nvs_get_u8(nvs, "pwr", &_transmitPower);
     if (err == ESP_OK) err = nvs_get_u8(nvs, "retx", &_retransmits);
     if (err == ESP_OK) err = nvs_get_u16(nvs, "v", &_configVersion);
+
+    // optional keys added in later firmware; keep defaults if absent
+    uint16_t tmp;
+    if (nvs_get_u16(nvs, "moiDry", &tmp) == ESP_OK) _moiDry = tmp;
+    if (nvs_get_u16(nvs, "moiWet", &tmp) == ESP_OK) _moiWet = tmp;
 
     nvs_close(nvs);
     return err;
