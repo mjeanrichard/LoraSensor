@@ -32,6 +32,7 @@ RTC_DATA_ATTR uint8_t _wakeupCount = 0;
 void sleep()
 {
     _sht->sleep();
+    _sht->deinit();
     _loraClient->sleep();
     vTaskDelay(1);
     i2c_del_master_bus(_i2cHandle);

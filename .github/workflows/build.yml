@@ -17,4 +17,6 @@ jobs:
 
       - name: Build firmware
         working-directory: Firmware/LoraSensor
-        run: idf.py build
+        run: |
+          . /opt/esp/idf/export.sh
+          idf.py build

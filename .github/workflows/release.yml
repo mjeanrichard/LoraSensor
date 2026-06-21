@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Firmware version (e.g. 1.1.0)'
+        description: 'Firmware version (e.g. 1.1)'
         required: true
 
 permissions:
@@ -19,21 +19,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Bump FIRMWARE_VERSION in config.h
+      - name: Bump FIRMWARE_BASE_VERSION in CMakeLists.txt
         run: |
-          sed -i 's/#define FIRMWARE_VERSION ".*"/#define FIRMWARE_VERSION "${{ inputs.version }}"/' \
-            Firmware/LoraSensor/main/config.h
-          grep FIRMWARE_VERSION Firmware/LoraSensor/main/config.h
+          sed -i 's/set(FIRMWARE_BASE_VERSION ".*")/set(FIRMWARE_BASE_VERSION "${{ inputs.version }}")/' \
+            Firmware/LoraSensor/CMakeLists.txt
+          grep FIRMWARE_BASE_VERSION Firmware/LoraSensor/CMakeLists.txt
 
       - name: Build firmware
         working-directory: Firmware/LoraSensor
-        run: idf.py build
+        run: |
+          . /opt/esp/idf/export.sh
+          idf.py -DDEBUG_BUILD=OFF build
 
-      - name: Commit version bump and tag
+      - name: Commit and tag
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Firmware/LoraSensor/main/config.h
+          git add Firmware/LoraSensor/CMakeLists.txt
           git commit -m "release: v${{ inputs.version }}"
           git tag "v${{ inputs.version }}"
           git push origin HEAD --follow-tags

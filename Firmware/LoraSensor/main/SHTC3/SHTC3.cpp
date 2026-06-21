@@ -56,6 +56,12 @@ esp_err_t SHTC3::sleep()
     return ESP_OK;
 }
 
+esp_err_t SHTC3::deinit()
+{
+    ESP_RETURN_ON_ERROR(i2c_master_bus_rm_device(_devHandle), TAG, "Failed to remove I2C device");
+    return ESP_OK;
+}
+
 esp_err_t SHTC3::reset()
 {
     ESP_RETURN_ON_ERROR(writeCommand(CMD_SOFT_RESET), TAG, "Failed to send reset command");

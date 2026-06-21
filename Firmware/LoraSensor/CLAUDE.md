@@ -12,7 +12,7 @@ LoraSensor/
 └── Firmware/LoraSensor/
     ├── main/               Application source (all files to edit)
     │   ├── main.cpp        Entry point: init, measure, transmit, sleep
-    │   ├── config.h        GPIO pin assignments, PWM freq, ADC constants, FIRMWARE_VERSION
+    │   ├── config.h        GPIO pin assignments, PWM freq, ADC constants
     │   ├── LoraClient.{h,cpp}  SX1262 transmit/receive, JSON build/parse
     │   ├── adc.{h,cpp}     Battery + moisture ADC (with LEDC PWM drive)
     │   ├── settings.{h,cpp}    NVS-backed config (name, sleep, power, …)
@@ -71,7 +71,7 @@ idf.py update-dependencies          # pull latest managed_components versions
 - `jgromes/radiolib` ≥ 7.7.0 (currently 7.7.0; 7.7.1 available)
 - `espressif/cjson` ≥ 1.7 (currently 1.7.19~2)
 
-**Debug builds:** Pass `-DRADIOLIB_DEBUG=ON` to cmake (or `idf.py -DRADIOLIB_DEBUG=ON build`) to enable RadioLib serial debug output. Off by default.
+**Debug vs release builds:** `DEBUG_BUILD` is `ON` by default — local builds get a `-dev` version suffix and RadioLib serial debug output. Pass `-DDEBUG_BUILD=OFF` for a clean release build: `idf.py -DDEBUG_BUILD=OFF build`. The release CI does this automatically. The base version is set in `CMakeLists.txt` (`FIRMWARE_BASE_VERSION`).
 
 ## NVS settings
 

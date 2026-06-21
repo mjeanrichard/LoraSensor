@@ -2,9 +2,16 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.16)
 
-option(RADIOLIB_DEBUG "Enable RadioLib debug output" OFF)
-if(RADIOLIB_DEBUG)
+set(FIRMWARE_BASE_VERSION "1.0")
+
+# DEBUG_BUILD=ON (default): appends -dev to version and enables RadioLib serial output.
+# Release CI passes -DDEBUG_BUILD=OFF to produce a clean version with no debug output.
+option(DEBUG_BUILD "Debug build" ON)
+if(DEBUG_BUILD)
+    add_compile_definitions(FIRMWARE_VERSION="${FIRMWARE_BASE_VERSION}-dev")
     add_compile_definitions(RADIOLIB_DEBUG_BASIC=1)
+else()
+    add_compile_definitions(FIRMWARE_VERSION="${FIRMWARE_BASE_VERSION}")
 endif()
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)

@@ -31,4 +31,5 @@ class SHTC3
     esp_err_t measure(float &temperature, float &humidity);
     esp_err_t begin(i2c_master_bus_handle_t _busHandle);
     esp_err_t sleep();
+    esp_err_t deinit();
 };
