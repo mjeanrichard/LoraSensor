@@ -49,3 +49,15 @@ jobs:
           files: |
             Firmware/LoraSensor/build/LoraSensor.bin
             Firmware/LoraSensor/build/LoraSensor.elf
+
+      - name: Deploy firmware to server
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "www.jean-richard.ch" >> ~/.ssh/known_hosts
+          scp -i ~/.ssh/deploy_key \
+            Firmware/LoraSensor/build/LoraSensor.bin \
+            "sftp@www.jean-richard.ch:/sftp/firmware/lora/LoraSensor-v${{ inputs.version }}.bin"
