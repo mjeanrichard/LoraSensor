@@ -1,5 +1,6 @@
 #include "LoraClient.h"
 #include <algorithm>
+#include <cstring>
 
 static const char *TAG = "LoRa";
 
@@ -9,6 +10,24 @@ static const char *TAG = "LoRa";
 #define LORA_STATE_TRANSMIT 3
 
 static volatile int _state = LORA_STATE_IDLE;
+
+// Returns true if candidate version is strictly newer than FIRMWARE_VERSION.
+// Compares "major.minor" numerically; ignores any "-dev" suffix on current version.
+static bool isFirmwareNewer(const char *candidate)
+{
+    char current[32];
+    strncpy(current, FIRMWARE_VERSION, sizeof(current) - 1);
+    current[sizeof(current) - 1] = '\0';
+    char *dash = strchr(current, '-');
+    if (dash) *dash = '\0';
+
+    int curMajor = 0, curMinor = 0;
+    int canMajor = 0, canMinor = 0;
+    sscanf(current, "%d.%d", &curMajor, &curMinor);
+    sscanf(candidate, "%d.%d", &canMajor, &canMinor);
+
+    return (canMajor > curMajor) || (canMajor == curMajor && canMinor > curMinor);
+}
 
 #define CHECK_SNPRINTF(ret, bufsize)                                                                    \
     do                                                                                                  \
@@ -27,7 +46,7 @@ esp_err_t LoraClient::initialize(bool forceTest)
     _hal = new EspHal(PIN_RADIO_SCK, PIN_RADIO_MISO, PIN_RADIO_MOSI);
     _radio = new SX1262(new Module(_hal, PIN_RADIO_NSS, PIN_RADIO_DIO1, PIN_RADIO_RST, PIN_RADIO_BUSY));
 
-    int state = _radio->begin(868, 125, 7, 5, 0x12, _settings->transmitPower(), 8);
+    int state = _radio->begin(LORA_FREQ_MHZ, LORA_BW_KHZ, LORA_SF, LORA_CR, LORA_SYNC_WORD, _settings->transmitPower(), LORA_PREAMBLE);
     if (state != RADIOLIB_ERR_NONE)
     {
         ESP_LOGE(TAG, "Radio initialization failed (code %d)", state);
@@ -93,23 +112,6 @@ esp_err_t LoraClient::sendConfig()
     return transmitData(buffer);
 }
 
-esp_err_t LoraClient::sendOtaStart()
-{
-    char buffer[150];
-    CHECK_SNPRINTF(snprintf(buffer, 150,
-        R"({"model":"PlantSense","msg":"ota_start","id":"%s","fw":"%s"})",
-        _chipId.c_str(), FIRMWARE_VERSION), 150);
-    return transmitData(buffer);
-}
-
-esp_err_t LoraClient::sendOtaFail(const char *reason)
-{
-    char buffer[150];
-    CHECK_SNPRINTF(snprintf(buffer, 150,
-        R"({"model":"PlantSense","msg":"ota_fail","id":"%s","reason":"%s"})",
-        _chipId.c_str(), reason), 150);
-    return transmitData(buffer);
-}
 
 esp_err_t LoraClient::sendWifiInfo(WifiClient *wifiClient)
 {
@@ -236,9 +238,21 @@ esp_err_t LoraClient::processData(char *buffer)
     else if (cmd == "ota")
     {
         ESP_LOGI(TAG, "Got ota command.");
-        if (getJsonString("url", json, _pendingOtaUrl) != ESP_OK)
+        std::string version;
+        if (getJsonString("version", json, version) != ESP_OK)
         {
-            ESP_LOGW(TAG, "ota command missing url field.");
+            ESP_LOGW(TAG, "ota command missing version field.");
+        }
+        else if (!isFirmwareNewer(version.c_str()))
+        {
+            ESP_LOGI(TAG, "OTA version %s is not newer than current %s, ignoring.", version.c_str(), FIRMWARE_VERSION);
+        }
+        else
+        {
+            char url[256];
+            snprintf(url, sizeof(url), OTA_FIRMWARE_URL_TEMPLATE, version.c_str());
+            _pendingOtaUrl = url;
+            ESP_LOGI(TAG, "OTA pending: %s -> %s", FIRMWARE_VERSION, version.c_str());
         }
         result = ESP_OK;
     }
@@ -259,6 +273,7 @@ esp_err_t LoraClient::updateConfig(const cJSON *json)
 
     if (getJsonString("name", json, strValue) == ESP_OK)
     {
+        if (strValue.size() > 24) strValue.resize(24);
         ESP_LOGI(TAG, "Setting new name '%s'.", strValue.c_str());
         _settings->setName(strValue);
     }
@@ -313,12 +328,14 @@ esp_err_t LoraClient::updateConfig(const cJSON *json)
 
     if (getJsonString("ssid", json, strValue) == ESP_OK)
     {
+        if (strValue.size() > 32) strValue.resize(32);
         ESP_LOGI(TAG, "Setting WiFi SSID.");
         _settings->setSsid(strValue);
     }
 
     if (getJsonString("wifiPwd", json, strValue) == ESP_OK)
     {
+        if (strValue.size() > 64) strValue.resize(64);
         ESP_LOGI(TAG, "Setting WiFi password.");
         _settings->setWifiPwd(strValue);
     }

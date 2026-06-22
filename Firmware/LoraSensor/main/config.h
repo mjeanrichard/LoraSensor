@@ -21,3 +21,13 @@
 
 #define PWM_FREQ 500000
 #define NUM_ADC_READS 5
+
+// %s is replaced by the version string (e.g. "1.1")
+#define OTA_FIRMWARE_URL_TEMPLATE "https://example.com/firmware/LoraSensor-v%s.bin"
+
+#define LORA_FREQ_MHZ   868.0
+#define LORA_BW_KHZ     125.0
+#define LORA_SF         7
+#define LORA_CR         5
+#define LORA_SYNC_WORD  0x12
+#define LORA_PREAMBLE   8

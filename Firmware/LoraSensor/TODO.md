@@ -1,49 +1,52 @@
 # LoraSensor — TODO
 
-## Security
+## Minor
 
-- [3] **Move WiFi credentials out of source code into NVS**
-  `wifiClient.cpp:44` — SSID and password are hardcoded in plain text. Add `ssid`/`password` fields to `Settings`; skip WiFi if not provisioned.
+- [*] **Extract LoRa radio parameters into `config.h` constants**
+  `LoraClient.cpp:28` — Frequency (868), bandwidth (125), SF (7), CR (5), sync word (0x12) are magic numbers. Move to named constants so they are easy to change for a different region or gateway.
 
-- [x] **Add bounds check on LoRa packet length before stack allocation**
-  `LoraClient.cpp:133` — `uint8_t buffer[len + 1]` is a VLA with an uncapped length from the radio. A malformed packet can overflow the stack. Cap at 255 bytes and return early if exceeded.
+## Bugs
 
-- [x] **Add range validation for received config values in `updateConfig`**
-  `LoraClient.cpp:213` — `sleep`, `wait`, `txPower`, `retransmits` are written to NVS without range checks. Clamp each to a sane range (e.g. sleep: 10–3600, txPower: 0–22, retransmits: 1–10).
+- [*] **`gpio_install_isr_service` called on every `attachInterrupt`** (`EspHal.cpp:63`)
+  Must be called exactly once. A second call returns `ESP_ERR_INVALID_STATE`, which
+  `ESP_ERROR_CHECK` turns into `abort()`. Guard with:
+  ```cpp
+  esp_err_t err = gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
+  if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) ESP_ERROR_CHECK(err);
+  ```
 
-## Moderate
+## Reliability
 
-- [2] **Fix `CHECK_SNPRINTF` truncation detection**
-  `LoraClient.cpp:15` — Macro only checks `x == 0`; `snprintf` returns the number of chars *that would be written*, so truncation occurs when return value `>= 250`. Change to `x <= 0 || x >= 250`.
+- [ ] **`uint16_t` ADC accumulators overflow if `NUM_ADC_READS` > 19** (`adc.cpp:63`)
+  Change `batterySum` and `moistureSum` to `uint32_t`.
 
-- [x] **Fix NVS handle leak on early return in `Settings::load()`**
-  `settings.cpp:40` — `RETURN_ON_ERROR` returns without calling `nvs_close(nvs)`. Restructure to always close the handle before returning.
+- [*] **`new` called at global scope before FreeRTOS is ready** (`main.cpp:26–27`)
+  `_loraClient` and `_adc` are heap-allocated via `new` before `app_main`, before the
+  IDF heap is initialised. Declare as raw pointers and construct inside `app_main`.
 
-- [2] **Remove dead `sendData()` declaration from `WifiClient`**
-  `wifiClient.h:27` — Declared but never defined or called. Remove to avoid a future linker error.
+- [ ] **WiFi retries forever on wrong credentials** (`wifiClient.cpp:13`)
+  `WIFI_EVENT_STA_DISCONNECTED` handler calls `esp_wifi_connect()` unconditionally.
+  Add a retry counter; stop and let the OTA timeout fire after N failures.
+
+- [ ] **OTA proceeds with empty SSID** (`LoraClient.cpp:processData`)
+  Receiving an `ota` command before WiFi credentials are set causes a 30-second
+  timeout then restart. Reject the command in `processData` if `_settings->getSsid()` is empty.
+
+- [*] **No length validation on `name`, `ssid`, `wifiPwd` in `set_config`** (`LoraClient.cpp:updateConfig`)
+  Oversized values are stored without bounds checking. A long `name` can push JSON
+  payloads past the buffer limit (now caught by `CHECK_SNPRINTF` as abort). `ssid` > 32
+  and `wifiPwd` > 64 are silently truncated by `strncpy`, so stored value won't match
+  what's used. Clamp: name ≤ 24, ssid ≤ 32, wifiPwd ≤ 64.
 
 ## Minor
 
-- [x] **Fix typos and misused log level**
-  - `LoraClient.cpp:31`: `"Raido initialization failed"` → `"Radio initialization failed"`
-  - `settings.cpp:33`: error string says `"qrite mode"` (NVS opens in `NVS_READONLY` here)
-  - `settings.cpp:57`: second `nvs_get_str` error says `"get length"` but it is reading the value
-  - `adc.cpp:11`: `"claibration"` → `"calibration"`
-  - `wifiClient.cpp:75`: `ESP_LOGE` used for an informational RSSI log → change to `ESP_LOGD`
+- [*] **`_wakeupCount` overflows silently at 255** (`main.cpp:30`)
+  Wraps to 0 after ~21 hours at 5-minute intervals, causing `idx` to jump backward.
+  Change `RTC_DATA_ATTR uint8_t _wakeupCount` to `uint32_t`.
 
-- [ ] **Extract LoRa radio parameters into `config.h` constants**
-  `LoraClient.cpp:28` — Frequency (868), bandwidth (125), SF (7), CR (5), sync word (0x12) are magic numbers. Move to named constants so they are easy to change for a different region or gateway.
+- [*] **`_isReceiving` is dead code** (`LoraClient.h:20`)
+  Never read or written; state is tracked entirely by `_state`. Remove the field.
 
-- [x] **Disable `RADIOLIB_DEBUG_BASIC` in production builds**
-  `CMakeLists.txt:5` — Flag is unconditionally enabled. Gate it on a CMake option or IDF build type.
-
-- [x] **Fix variable shadowing in `SHTC3::calculateCrc`**
-  `SHTC3.cpp:142` — Inner `for` loop reuses `i`, shadowing the outer loop variable. Rename inner to `j`.
-
-## Housekeeping
-
-- [x] **Add `managed_components/` and `build/` to `.gitignore`**
-  `managed_components/` is generated by the ESP-IDF component manager and should not be tracked. Run `git rm -r --cached Firmware/LoraSensor/managed_components` after updating `.gitignore`.
-
-- [2] **Write a proper `README.md` for the firmware**
-  `Firmware/LoraSensor/README.md` currently contains only raw MQTT topic snippets. Replace with project description, build/flash instructions, pin map, and LoRa JSON protocol reference.
+- [*] **Redundant `memset` after value-initialisation** (`EspHal.cpp:137`)
+  `spi_device_interface_config_t cfg = {}` already zero-initialises all fields.
+  Remove the subsequent `memset(&cfg, 0, sizeof(cfg))`.

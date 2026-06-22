@@ -35,3 +35,4 @@ packages/
 /Board/LoraSensor/#auto_saved_files#
 *.FCBak
 *.old
+/Firmware/LoraSensor/managed_components/*

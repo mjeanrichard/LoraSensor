@@ -14,7 +14,7 @@ dependencies:
       type: idf
     version: 6.0.1
   jgromes/radiolib:
-    component_hash: 974b5a21cb76033e24eddab1b0d19f66e03dde6dfbedaf81ed6fdc90464cdb2d
+    component_hash: 024269f750d7eb181d07bd57ccec5e5e4e276dbb262d681a6501c8e2244e80f0
     dependencies:
     - name: idf
       require: private
@@ -22,7 +22,7 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 7.7.0
+    version: 7.7.1
 direct_dependencies:
 - espressif/cjson
 - idf

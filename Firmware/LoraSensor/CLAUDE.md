@@ -50,11 +50,6 @@ LoRa parameters (must match gateway): 868 MHz, BW 125 kHz, SF7, CR 4/5, sync wor
 
 **Toolchain:** ESP-IDF 6.0.1 at `C:\esp\v6.0.1\esp-idf`, RISC-V GCC 15.2.0, target `esp32c3`.
 
-**Environment setup (once per terminal session):**
-```powershell
-C:\esp\v6.0.1\esp-idf\export.ps1
-```
-
 **Common commands** (run from `Firmware/LoraSensor/`):
 ```powershell
 idf.py build                        # compile
@@ -82,7 +77,7 @@ idf.py update-dependencies          # pull latest managed_components versions
 | `sleep` | u16 | 300 | Deep sleep seconds |
 | `wait` | u8 | 10 | Receive window seconds |
 | `pwr` | u8 | 15 | LoRa TX power (dBm) |
-| `retx` | u8 | 2 | Number of retransmits |
+| `retx` | u8 | 2 | Total number of transmitions |
 | `moiDry` | u16 | 2700 | Moisture dry-point calibration (mV, open air) |
 | `moiWet` | u16 | 700 | Moisture wet-point calibration (mV, saturated soil) |
 | `ssid` | str | "" | WiFi SSID for OTA updates |
@@ -126,19 +121,11 @@ All fields optional. `moiDry`/`moiWet` are raw ADC millivolt readings; observe `
 
 **Downlink — OTA update:**
 ```json
-{"id":"<mac>","cmd":"ota","url":"https://example.com/firmware.bin"}
+{"id":"<mac>","cmd":"ota","version":"1.1"}
 ```
+Device checks if `version` is newer than its current firmware (numeric `major.minor` comparison, ignoring any `-dev` suffix). If newer, it constructs the download URL from `OTA_FIRMWARE_URL_TEMPLATE` in `config.h`.
 
-**Uplink — OTA started** (sent before WiFi connects):
-```json
-{"model":"PlantSense","msg":"ota_start","id":"<mac>","fw":"<version>"}
-```
-
-**Uplink — OTA failed** (WiFi timeout or download error; device restarts after):
-```json
-{"model":"PlantSense","msg":"ota_fail","id":"<mac>","reason":"wifi_timeout|download_failed"}
-```
-On success the device restarts silently; the first data packet with the new `fw` version confirms it.
+On success or failure the device restarts silently; the first data packet with the new `fw` version confirms a successful update.
 
 Gateway used: OpenMQTTGateway on a LilyGO board.
 

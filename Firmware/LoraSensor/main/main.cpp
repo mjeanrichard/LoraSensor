@@ -25,11 +25,11 @@
 static const char *TAG = "main";
 
 Settings settings;
-LoraClient *_loraClient = new LoraClient(&settings);
-Adc *_adc = new Adc();
+LoraClient *_loraClient = nullptr;
+Adc *_adc = nullptr;
 i2c_master_bus_handle_t _i2cHandle;
 SHTC3 *_sht;
-RTC_DATA_ATTR uint8_t _wakeupCount = 0;
+RTC_DATA_ATTR uint32_t _wakeupCount = 0;
 
 void sleep()
 {
@@ -72,6 +72,9 @@ void setupI2c()
 
 extern "C" void app_main(void)
 {
+    _loraClient = new LoraClient(&settings);
+    _adc = new Adc();
+
     esp_ota_mark_app_valid_cancel_rollback();
 
     bool hasUsb = usb_serial_jtag_is_connected();
@@ -133,8 +136,8 @@ extern "C" void app_main(void)
     if (_loraClient->hasPendingOta())
     {
         WifiClient wifiClient(&settings);
-        OtaClient otaClient;
-        otaClient.update(_loraClient->pendingOtaUrl().c_str(), &wifiClient, _loraClient);
+        OtaClient otaClient(&wifiClient);
+        otaClient.update(_loraClient->pendingOtaUrl().c_str());
         // never returns
     }
 

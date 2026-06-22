@@ -17,7 +17,6 @@ class LoraClient
     Settings *_settings;
 
     bool _forceTest = false;
-    bool _isReceiving = false;
     std::string _pendingOtaUrl;
 
     static void dataReady(void);
@@ -25,8 +24,6 @@ class LoraClient
     esp_err_t transmitData(const char *buffer);
 
     esp_err_t sendConfig();
-    esp_err_t sendOtaStart();
-    esp_err_t sendOtaFail(const char *reason);
 
     esp_err_t processData(char *buffer);
     esp_err_t updateConfig(const cJSON *json);
