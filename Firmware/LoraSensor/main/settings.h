@@ -17,6 +17,8 @@ private:
     uint16_t _configVersion = 0;
     uint16_t _moiDry = 2700;
     uint16_t _moiWet = 700;
+    std::string _ssid;
+    std::string _wifiPwd;
 
     esp_err_t readString(nvs_handle_t nvs, const char *key, std::string &field);
     esp_err_t readBool(nvs_handle_t nvs, const char *key, bool *value);
@@ -50,4 +52,10 @@ public:
 
     uint16_t moiWet() const { return _moiWet; }
     void setMoiWet(uint16_t moiWet) { _moiWet = moiWet; }
+
+    const std::string &getSsid() const { return _ssid; }
+    void setSsid(const std::string &ssid) { _ssid = ssid; }
+
+    const std::string &getWifiPwd() const { return _wifiPwd; }
+    void setWifiPwd(const std::string &pwd) { _wifiPwd = pwd; }
 };

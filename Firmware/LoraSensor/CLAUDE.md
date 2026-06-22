@@ -85,6 +85,8 @@ idf.py update-dependencies          # pull latest managed_components versions
 | `retx` | u8 | 2 | Number of retransmits |
 | `moiDry` | u16 | 2700 | Moisture dry-point calibration (mV, open air) |
 | `moiWet` | u16 | 700 | Moisture wet-point calibration (mV, saturated soil) |
+| `ssid` | str | "" | WiFi SSID for OTA updates |
+| `wifiPwd` | str | "" | WiFi password for OTA updates |
 | `v` | u16 | auto | Config version (auto-incremented on save) |
 
 ## JSON protocol (raw LoRa, no LoRaWAN)
@@ -105,9 +107,10 @@ idf.py update-dependencies          # pull latest managed_components versions
 **Downlink — set config:**
 ```json
 {"id":"<mac>","cmd":"set_config","name":"...","sleep":300,"wait":10,
- "txPower":15,"retransmits":2,"test":false,"moiDry":2700,"moiWet":700}
+ "txPower":15,"retransmits":2,"test":false,"moiDry":2700,"moiWet":700,
+ "ssid":"MyNetwork","wifiPwd":"secret"}
 ```
-All fields optional. `moiDry`/`moiWet` are raw ADC millivolt readings; observe `moiRaw` in data packets under dry and wet conditions to determine values.
+All fields optional. `moiDry`/`moiWet` are raw ADC millivolt readings; observe `moiRaw` in data packets under dry and wet conditions to determine values. `ssid`/`wifiPwd` are required before issuing an `ota` command.
 
 **Downlink — get config:**
 ```json
@@ -118,15 +121,30 @@ All fields optional. `moiDry`/`moiWet` are raw ADC millivolt readings; observe `
 ```json
 {"model":"PlantSense","msg":"config","id":"<mac>","name":"<name>",
  "test":<bool>,"sleep":<int>,"retx":<uint>,"wait":<uint>,"pwr":<uint>,
- "moiDry":<uint>,"moiWet":<uint>,"v":<uint>,"fw":"<version>"}
+ "moiDry":<uint>,"moiWet":<uint>,"wifiSet":<bool>,"v":<uint>,"fw":"<version>"}
 ```
+
+**Downlink — OTA update:**
+```json
+{"id":"<mac>","cmd":"ota","url":"https://example.com/firmware.bin"}
+```
+
+**Uplink — OTA started** (sent before WiFi connects):
+```json
+{"model":"PlantSense","msg":"ota_start","id":"<mac>","fw":"<version>"}
+```
+
+**Uplink — OTA failed** (WiFi timeout or download error; device restarts after):
+```json
+{"model":"PlantSense","msg":"ota_fail","id":"<mac>","reason":"wifi_timeout|download_failed"}
+```
+On success the device restarts silently; the first data packet with the new `fw` version confirms it.
 
 Gateway used: OpenMQTTGateway on a LilyGO board.
 
 ## Known issues & pending work
 
 See task list (created in Claude Code session). Key points:
-- WiFi credentials are currently hardcoded in `wifiClient.cpp` — must be moved to NVS
 - Received config values are not range-validated before being saved to NVS
 
 ## Coding conventions

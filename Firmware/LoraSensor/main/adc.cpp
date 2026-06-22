@@ -14,7 +14,8 @@ esp_err_t Adc::initialize(Settings &settings)
     adc_oneshot_unit_init_cfg_t adcConfig = {
         .unit_id = ADC_UNIT_1,
         .clk_src = ADC_DIGI_CLK_SRC_DEFAULT,
-        .ulp_mode = ADC_ULP_MODE_DISABLE};
+        .ulp_mode = ADC_ULP_MODE_DISABLE,
+    };
     ESP_RETURN_ON_ERROR(adc_oneshot_new_unit(&adcConfig, &_adcHandle), TAG, "Failed to create adc unit.");
 
     adc_oneshot_chan_cfg_t oneShotConfig = {
@@ -31,7 +32,8 @@ esp_err_t Adc::initialize(Settings &settings)
         .timer_num = LEDC_TIMER_0,
         .freq_hz = PWM_FREQ,
         .clk_cfg = LEDC_USE_RC_FAST_CLK,
-        .deconfigure = false};
+        .deconfigure = false,
+    };
     ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
 
     // Prepare and then apply the LEDC PWM channel configuration
@@ -76,19 +78,16 @@ esp_err_t Adc::readValues(AdcMeasurements &measurements)
 
     measurements.BatteryVolts = (batterySum * 2) / (float)(1000 * NUM_ADC_READS);
 
-    if (measurements.BatteryVolts >= 3.529)
+    float pct;
+    if (measurements.BatteryVolts >= 3.529f)
     {
-        measurements.BatteryPercent = 148 * measurements.BatteryVolts - 517;
+        pct = 148.0f * measurements.BatteryVolts - 517.0f;
     }
     else
     {
-        measurements.BatteryPercent = 10 * measurements.BatteryVolts - 30;
+        pct = 10.0f * measurements.BatteryVolts - 30.0f;
     }
-
-    if (measurements.BatteryPercent > 100)
-    {
-        measurements.BatteryPercent = 100;
-    }
+    measurements.BatteryPercent = (uint8_t)std::max(0.0f, std::min(100.0f, pct));
 
     measurements.MoistureRaw = moistureSum / NUM_ADC_READS;
     uint16_t dryPoint = _settings->moiDry();

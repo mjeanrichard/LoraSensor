@@ -10,14 +10,15 @@ static const char *TAG = "LoRa";
 
 static volatile int _state = LORA_STATE_IDLE;
 
-#define CHECK_SNPRINTF(x)                                                                                                                                                                              \
-    do                                                                                                                                                                                                 \
-    {                                                                                                                                                                                                  \
-        if (unlikely(x == 0))                                                                                                                                                                          \
-        {                                                                                                                                                                                              \
-            ESP_LOGE(TAG, "%s(%d): Failed to do SPRINTF.", __FUNCTION__, __LINE__);                                                                                                                    \
-            abort();                                                                                                                                                                                   \
-        }                                                                                                                                                                                              \
+#define CHECK_SNPRINTF(ret, bufsize)                                                                    \
+    do                                                                                                  \
+    {                                                                                                   \
+        int _n = (ret);                                                                                 \
+        if (unlikely(_n < 0 || _n >= (int)(bufsize)))                                                  \
+        {                                                                                               \
+            ESP_LOGE(TAG, "%s(%d): snprintf failed or output truncated.", __FUNCTION__, __LINE__);      \
+            abort();                                                                                    \
+        }                                                                                               \
     } while (0)
 
 esp_err_t LoraClient::initialize(bool forceTest)
@@ -63,7 +64,7 @@ esp_err_t LoraClient::sendMeasurements(float temp, float humidity, AdcMeasuremen
         wakeupCount,
         _settings->version(),
         FIRMWARE_VERSION
-    ));
+    ), 250);
 
     return transmitData(buffer);
 }
@@ -74,7 +75,7 @@ esp_err_t LoraClient::sendConfig()
     CHECK_SNPRINTF(snprintf(
         buffer,
         250,
-        R"({"model":"PlantSense","msg":"config","id":"%s","name":"%s","test":%s,"sleep":%i,"retx":%u,"wait":%u,"pwr":%u,"moiDry":%u,"moiWet":%u,"v":%u,"fw":"%s"})",
+        R"({"model":"PlantSense","msg":"config","id":"%s","name":"%s","test":%s,"sleep":%i,"retx":%u,"wait":%u,"pwr":%u,"moiDry":%u,"moiWet":%u,"wifiSet":%s,"v":%u,"fw":"%s"})",
         _chipId.c_str(),
         _settings->getName().c_str(),
         _settings->isTest() ? "true" : "false",
@@ -84,10 +85,29 @@ esp_err_t LoraClient::sendConfig()
         _settings->transmitPower(),
         _settings->moiDry(),
         _settings->moiWet(),
+        _settings->getSsid().empty() ? "false" : "true",
         _settings->version(),
         FIRMWARE_VERSION
-    ));
+    ), 250);
 
+    return transmitData(buffer);
+}
+
+esp_err_t LoraClient::sendOtaStart()
+{
+    char buffer[150];
+    CHECK_SNPRINTF(snprintf(buffer, 150,
+        R"({"model":"PlantSense","msg":"ota_start","id":"%s","fw":"%s"})",
+        _chipId.c_str(), FIRMWARE_VERSION), 150);
+    return transmitData(buffer);
+}
+
+esp_err_t LoraClient::sendOtaFail(const char *reason)
+{
+    char buffer[150];
+    CHECK_SNPRINTF(snprintf(buffer, 150,
+        R"({"model":"PlantSense","msg":"ota_fail","id":"%s","reason":"%s"})",
+        _chipId.c_str(), reason), 150);
     return transmitData(buffer);
 }
 
@@ -104,7 +124,7 @@ esp_err_t LoraClient::sendWifiInfo(WifiClient *wifiClient)
         wifiClient->getRssi(),
         wifiClient->getConnectTime(),
         FIRMWARE_VERSION
-    ));
+    ), 250);
 
     return transmitData(buffer);
 }
@@ -213,6 +233,15 @@ esp_err_t LoraClient::processData(char *buffer)
         ESP_LOGI(TAG, "Got get_config command.");
         result = sendConfig();
     }
+    else if (cmd == "ota")
+    {
+        ESP_LOGI(TAG, "Got ota command.");
+        if (getJsonString("url", json, _pendingOtaUrl) != ESP_OK)
+        {
+            ESP_LOGW(TAG, "ota command missing url field.");
+        }
+        result = ESP_OK;
+    }
     else
     {
         ESP_LOGW(TAG, "Unknown command '%s'.", cmd.c_str());
@@ -280,6 +309,18 @@ esp_err_t LoraClient::updateConfig(const cJSON *json)
         intValue = std::max<int32_t>(0, std::min<int32_t>(3300, intValue));
         ESP_LOGI(TAG, "Setting moisture wet point to %li.", intValue);
         _settings->setMoiWet((uint16_t)intValue);
+    }
+
+    if (getJsonString("ssid", json, strValue) == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Setting WiFi SSID.");
+        _settings->setSsid(strValue);
+    }
+
+    if (getJsonString("wifiPwd", json, strValue) == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Setting WiFi password.");
+        _settings->setWifiPwd(strValue);
     }
 
     _settings->save();

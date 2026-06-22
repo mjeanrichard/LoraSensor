@@ -41,8 +41,8 @@ esp_err_t WifiClient::start()
     RETURN_ON_ERROR(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifiEventHandler, this, &instance_got_ip));
 
     wifi_config_t wifi_config = {.sta = {}};
-    strcpy((char *)wifi_config.sta.ssid, "zuhause-iot");
-    strcpy((char *)wifi_config.sta.password, "BEKrsN2eYTEzGeL");
+    strncpy((char *)wifi_config.sta.ssid, _settings->getSsid().c_str(), sizeof(wifi_config.sta.ssid) - 1);
+    strncpy((char *)wifi_config.sta.password, _settings->getWifiPwd().c_str(), sizeof(wifi_config.sta.password) - 1);
     wifi_config.sta.scan_method = WIFI_FAST_SCAN;
     wifi_config.sta.sort_method = WIFI_CONNECT_AP_BY_SECURITY;
     wifi_config.sta.threshold = {
@@ -57,6 +57,20 @@ esp_err_t WifiClient::start()
 
     ESP_LOGI(TAG, "wifi_init_sta finished.");
 
+    return ESP_OK;
+}
+
+esp_err_t WifiClient::stop()
+{
+    _isConnected = false;
+    RETURN_ON_ERROR(esp_wifi_stop());
+    RETURN_ON_ERROR(esp_wifi_deinit());
+    if (_wifiNetIf)
+    {
+        esp_netif_destroy(_wifiNetIf);
+        _wifiNetIf = nullptr;
+    }
+    esp_event_loop_delete_default();
     return ESP_OK;
 }
 

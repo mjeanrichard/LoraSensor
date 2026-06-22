@@ -18,12 +18,15 @@ class LoraClient
 
     bool _forceTest = false;
     bool _isReceiving = false;
+    std::string _pendingOtaUrl;
 
     static void dataReady(void);
 
     esp_err_t transmitData(const char *buffer);
 
     esp_err_t sendConfig();
+    esp_err_t sendOtaStart();
+    esp_err_t sendOtaFail(const char *reason);
 
     esp_err_t processData(char *buffer);
     esp_err_t updateConfig(const cJSON *json);
@@ -43,4 +46,7 @@ class LoraClient
     esp_err_t startListening();
 
     std::string _chipId = "";
+
+    bool hasPendingOta() const { return !_pendingOtaUrl.empty(); }
+    const std::string &pendingOtaUrl() const { return _pendingOtaUrl; }
 };

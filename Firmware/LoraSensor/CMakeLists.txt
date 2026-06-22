@@ -14,5 +14,7 @@ else()
     add_compile_definitions(FIRMWARE_VERSION="${FIRMWARE_BASE_VERSION}")
 endif()
 
+set(PARTITION_TABLE_CSV_PATH "partitions.csv")
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(LoraSensor)

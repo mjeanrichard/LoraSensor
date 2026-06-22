@@ -8,6 +8,8 @@
 #include "LoraClient.h"
 #include "SHTC3/SHTC3.h"
 #include "adc.h"
+#include "otaClient.h"
+#include "esp_ota_ops.h"
 #include "driver/i2c_master.h"
 #include "driver/ledc.h"
 #include "driver/uart.h"
@@ -31,11 +33,16 @@ RTC_DATA_ATTR uint8_t _wakeupCount = 0;
 
 void sleep()
 {
-    _sht->sleep();
-    _sht->deinit();
-    _loraClient->sleep();
+    esp_err_t ret;
+    ret = _sht->sleep();
+    if (ret != ESP_OK) ESP_LOGE(TAG, "SHTC3 sleep failed (%d)", ret);
+    ret = _sht->deinit();
+    if (ret != ESP_OK) ESP_LOGE(TAG, "SHTC3 deinit failed (%d)", ret);
+    ret = _loraClient->sleep();
+    if (ret != ESP_OK) ESP_LOGE(TAG, "LoRa sleep failed (%d)", ret);
     vTaskDelay(1);
-    i2c_del_master_bus(_i2cHandle);
+    ret = i2c_del_master_bus(_i2cHandle);
+    if (ret != ESP_OK) ESP_LOGE(TAG, "I2C bus delete failed (%d)", ret);
     esp_sleep_enable_gpio_wakeup_on_hp_periph_powerdown(BIT(PIN_BTN), ESP_GPIO_WAKEUP_GPIO_LOW);
     esp_sleep_enable_timer_wakeup(settings.sleepSeconds() * 1000 * 1000);
     esp_deep_sleep_start();
@@ -65,6 +72,8 @@ void setupI2c()
 
 extern "C" void app_main(void)
 {
+    esp_ota_mark_app_valid_cancel_rollback();
+
     bool hasUsb = usb_serial_jtag_is_connected();
 
     esp_log_level_set("SHTC3", ESP_LOG_DEBUG);
@@ -119,6 +128,14 @@ extern "C" void app_main(void)
             _loraClient->getData();
             vTaskDelay(1);
         }
+    }
+
+    if (_loraClient->hasPendingOta())
+    {
+        WifiClient wifiClient(&settings);
+        OtaClient otaClient;
+        otaClient.update(_loraClient->pendingOtaUrl().c_str(), &wifiClient, _loraClient);
+        // never returns
     }
 
     sleep();

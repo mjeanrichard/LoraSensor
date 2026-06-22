@@ -30,6 +30,7 @@ class WifiClient
     WifiClient(Settings *settings) : _settings(settings) {};
 
     esp_err_t start();
+    esp_err_t stop();
 
     bool isConnected() { return _isConnected; }
 

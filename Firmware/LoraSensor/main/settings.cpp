@@ -16,6 +16,8 @@ esp_err_t Settings::save()
     ESP_RETURN_ON_ERROR(nvs_set_u8(nvs, "retx", _retransmits), TAG, "Could not write retx to nvs.");
     ESP_RETURN_ON_ERROR(nvs_set_u16(nvs, "moiDry", _moiDry), TAG, "Could not write moiDry to nvs.");
     ESP_RETURN_ON_ERROR(nvs_set_u16(nvs, "moiWet", _moiWet), TAG, "Could not write moiWet to nvs.");
+    ESP_RETURN_ON_ERROR(nvs_set_str(nvs, "ssid", _ssid.c_str()), TAG, "Could not write ssid to nvs.");
+    ESP_RETURN_ON_ERROR(nvs_set_str(nvs, "wifiPwd", _wifiPwd.c_str()), TAG, "Could not write wifiPwd to nvs.");
     ESP_RETURN_ON_ERROR(nvs_set_u16(nvs, "v", ++_configVersion), TAG, "Could not write v to nvs.");
     ESP_RETURN_ON_ERROR(nvs_commit(nvs), TAG, "Could not commit nvs.");
     nvs_close(nvs);
@@ -57,6 +59,9 @@ esp_err_t Settings::load()
     uint16_t tmp;
     if (nvs_get_u16(nvs, "moiDry", &tmp) == ESP_OK) _moiDry = tmp;
     if (nvs_get_u16(nvs, "moiWet", &tmp) == ESP_OK) _moiWet = tmp;
+    std::string tmpStr;
+    if (readString(nvs, "ssid", tmpStr) == ESP_OK) _ssid = tmpStr;
+    if (readString(nvs, "wifiPwd", tmpStr) == ESP_OK) _wifiPwd = tmpStr;
 
     nvs_close(nvs);
     return err;
