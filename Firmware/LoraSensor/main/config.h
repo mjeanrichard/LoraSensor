@@ -23,7 +23,7 @@
 #define NUM_ADC_READS 5
 
 // %s is replaced by the version string (e.g. "1.1")
-#define OTA_FIRMWARE_URL_TEMPLATE "https://www.jean-richard.ch/firmware/lora/LoraSensor-v%s.bin"
+#define OTA_FIRMWARE_URL_TEMPLATE "https://github.com/mjeanrichard/LoraSensor/releases/download/v%s/LoraSensor.bin"
 
 #define LORA_FREQ_MHZ   868.0
 #define LORA_BW_KHZ     125.0
