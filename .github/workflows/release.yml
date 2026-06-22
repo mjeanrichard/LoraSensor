@@ -19,6 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Trust workspace directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Bump FIRMWARE_BASE_VERSION in CMakeLists.txt
         run: |
           sed -i 's/set(FIRMWARE_BASE_VERSION ".*")/set(FIRMWARE_BASE_VERSION "${{ inputs.version }}")/' \
