@@ -141,3 +141,8 @@ See task list (created in Claude Code session). Key points:
 - Log tags are `static const char *TAG` at file scope
 - No dynamic allocation after init; stack VLAs are used but should be bounded
 - `#pragma once` for headers (except EspHal.h which uses include guards)
+
+## sdkconfig rules
+
+- **Never delete `sdkconfig`** and **never modify `sdkconfig.defaults`**
+- All Kconfig changes (stack size, partition table, flash size, etc.) go directly into `sdkconfig`

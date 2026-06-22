@@ -33,6 +33,7 @@ void OtaClient::update(const char *url)
     http_cfg.url = url;
     http_cfg.crt_bundle_attach = esp_crt_bundle_attach;
     http_cfg.keep_alive_enable = true;
+    http_cfg.buffer_size_tx = 4096;
 
     esp_https_ota_config_t ota_cfg = {};
     ota_cfg.http_config = &http_cfg;
